@@ -1,0 +1,167 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { Session } from '@supabase/supabase-js';
+import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { showError, showSuccess } from '@/utils/toast';
+import { format } from 'date-fns';
+
+type Profile = {
+  full_name: string;
+};
+
+type CustomRequest = {
+  id: string;
+  created_at: string;
+  product_description: string;
+  status: string;
+  image_url: string | null;
+  product_link: string | null;
+  notes: string | null;
+  profiles: Profile | null;
+};
+
+const ADMIN_EMAIL = "mredza31@gmail.com";
+
+const CustomRequestsList = () => {
+  const navigate = useNavigate();
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [requests, setRequests] = useState<CustomRequest[]>([]);
+
+  useEffect(() => {
+    const getInitialData = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.email !== ADMIN_EMAIL) {
+        navigate('/login');
+      } else {
+        setSession(session);
+        await fetchRequests();
+      }
+      setLoading(false);
+    };
+    getInitialData();
+  }, [navigate]);
+
+  const fetchRequests = async () => {
+    const { data, error } = await supabase
+      .from('custom_requests')
+      .select('*, profiles(full_name)')
+      .order('created_at', { ascending: false });
+      
+    if (error) {
+      showError('Could not fetch custom requests.');
+      console.error(error);
+    } else if (data) {
+      setRequests(data as unknown as CustomRequest[]);
+    }
+  };
+
+  const handleStatusChange = async (requestId: string, newStatus: string) => {
+    const { error } = await supabase
+      .from('custom_requests')
+      .update({ status: newStatus })
+      .eq('id', requestId);
+
+    if (error) {
+      showError('Failed to update status.');
+    } else {
+      showSuccess('Request status updated.');
+      setRequests(prev => 
+        prev.map(req => req.id === requestId ? { ...req, status: newStatus } : req)
+      );
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-3xl font-black uppercase">Custom Requests</CardTitle>
+          <CardDescription>Review and manage user-submitted product requests.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {requests.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">No custom requests have been submitted yet.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>User</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Image</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {requests.map((request) => (
+                  <TableRow key={request.id}>
+                    <TableCell>{format(new Date(request.created_at), 'PP')}</TableCell>
+                    <TableCell>{request.profiles?.full_name || 'N/A'}</TableCell>
+                    <TableCell className="max-w-xs">
+                      <p className="font-medium truncate">{request.product_description}</p>
+                      {request.product_link && <a href={request.product_link} target="_blank" rel="noopener noreferrer" className="text-primary text-sm hover:underline">Product Link</a>}
+                      {request.notes && <p className="text-xs text-muted-foreground mt-1">Notes: {request.notes}</p>}
+                    </TableCell>
+                    <TableCell>
+                      {request.image_url ? (
+                        <a href={request.image_url} target="_blank" rel="noopener noreferrer">
+                          <img src={request.image_url} alt="Request" className="w-16 h-16 object-cover rounded-md" />
+                        </a>
+                      ) : (
+                        <img src="/placeholder.svg" alt="No Image" className="w-16 h-16 object-cover rounded-md bg-muted" />
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Select value={request.status} onValueChange={(value) => handleStatusChange(request.id, value)}>
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue placeholder="Set status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="approved">Approved</SelectItem>
+                          <SelectItem value="ordered">Ordered</SelectItem>
+                          <SelectItem value="shipped">Shipped</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                          <SelectItem value="rejected">Rejected</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default CustomRequestsList;
