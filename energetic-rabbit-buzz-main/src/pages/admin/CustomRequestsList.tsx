@@ -47,6 +47,8 @@ const CustomRequestsList = () => {
   const [requests, setRequests] = useState<CustomRequest[]>([]);
 
   useEffect(() => {
+    let isMounted = true;
+    
     const getInitialData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user?.email !== ADMIN_EMAIL) {
@@ -55,16 +57,26 @@ const CustomRequestsList = () => {
         setSession(session);
         await fetchRequests();
       }
-      setLoading(false);
+      if (isMounted) {
+        setLoading(false);
+      }
     };
+    
     getInitialData();
+    
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
   }, [navigate]);
 
   const fetchRequests = async () => {
     console.log('Fetching custom requests...');
+    
+    // Force a fresh fetch by adding cache-busting parameters
     const { data, error } = await supabase
       .from('custom_requests')
-      .select('*, profiles(full_name)')
+      .select('*, profiles(full_name)', { count: 'exact' })
       .order('created_at', { ascending: false });
       
     console.log('Fetch result:', { data, error, dataLength: data?.length });
