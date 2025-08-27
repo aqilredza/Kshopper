@@ -61,15 +61,19 @@ const CustomRequestsList = () => {
   }, [navigate]);
 
   const fetchRequests = async () => {
+    console.log('Fetching custom requests...');
     const { data, error } = await supabase
       .from('custom_requests')
       .select('*, profiles(full_name)')
       .order('created_at', { ascending: false });
       
+    console.log('Fetch result:', { data, error });
+    
     if (error) {
       showError('Could not fetch custom requests.');
       console.error(error);
     } else if (data) {
+      console.log('Setting requests state with', data.length, 'items');
       setRequests(data as unknown as CustomRequest[]);
     }
   };
@@ -100,10 +104,15 @@ const CustomRequestsList = () => {
       const previousRequests = [...requests];
       setRequests(prev => prev.filter(req => req.id !== requestId));
 
-      const { error } = await supabase
+      console.log('Attempting to delete request with ID:', requestId);
+      
+      const { data, error } = await supabase
         .from('custom_requests')
         .delete()
-        .eq('id', requestId);
+        .eq('id', requestId)
+        .select();
+
+      console.log('Delete operation result:', { data, error });
 
       if (error) {
         // Rollback UI change if deletion fails
@@ -112,11 +121,9 @@ const CustomRequestsList = () => {
         console.error('Deletion error:', error);
       } else {
         showSuccess('Request deleted successfully.');
+        console.log('Request deleted, refreshing list...');
         // Refresh the list to ensure consistency
-        // Add a small delay to ensure database processes the deletion
-        setTimeout(async () => {
-          await fetchRequests();
-        }, 300);
+        await fetchRequests();
       }
     } catch (error) {
       showError('Failed to delete request.');
