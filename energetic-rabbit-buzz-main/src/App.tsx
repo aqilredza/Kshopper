@@ -21,7 +21,6 @@ import AdminHotItems from "./pages/AdminHotItems";
 import AddProductPage from "./pages/admin/AddProductPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import CustomRequestsList from "./pages/admin/CustomRequestsList";
-import AdminCustomRequestDetail from "./pages/admin/CustomRequestDetail";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "@/context/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
@@ -57,7 +56,6 @@ function App() {
               <Route path="/admin/hot-items" element={<AdminHotItems />} />
               <Route path="/admin/products/new" element={<AddProductPage />} />
               <Route path="/admin/custom-requests" element={<CustomRequestsList />} />
-              <Route path="/admin/custom-requests/:requestId" element={<AdminCustomRequestDetail />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
