@@ -81,6 +81,12 @@ const CustomRequestsList = () => {
     console.log('All requests in database:', allData);
     console.log('All requests error:', allError);
     
+    // Log the status values of all requests
+    if (allData) {
+      const statusValues = allData.map(req => ({ id: req.id, status: req.status, created_at: req.created_at }));
+      console.log('Status values of all requests:', statusValues);
+    }
+    
     // Then fetch requests for display
     const { data, error } = await supabase
       .from('custom_requests')
@@ -122,6 +128,14 @@ const CustomRequestsList = () => {
     console.log('Attempting to delete request with ID:', requestId);
     
     try {
+      // Check if the record exists before deletion
+      const { data: checkData, error: checkError } = await supabase
+        .from('custom_requests')
+        .select('*')
+        .eq('id', requestId);
+        
+      console.log('Record before deletion attempt:', checkData, checkError);
+      
       // Try actual deletion first
       const { data, error } = await supabase
         .from('custom_requests')
