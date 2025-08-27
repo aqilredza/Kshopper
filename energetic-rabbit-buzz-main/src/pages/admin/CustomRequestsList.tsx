@@ -73,26 +73,21 @@ const CustomRequestsList = () => {
   const fetchRequests = async () => {
     console.log('Fetching custom requests...');
     
-    // Let's also check the session to make sure we have the right permissions
-    const { data: sessionData } = await supabase.auth.getSession();
-    console.log('Current session:', sessionData);
-    
-    // First, let's fetch all requests to see what status values exist
-    const { data: allData } = await supabase
+    // Fetch all requests first to inspect the data
+    const { data: allData, error: allError } = await supabase
       .from('custom_requests')
-      .select('*', { count: 'exact' })
-      .order('created_at', { ascending: false });
+      .select('*', { count: 'exact' });
       
-    console.log('All requests (before filtering):', allData);
+    console.log('All requests in database:', allData);
+    console.log('All requests error:', allError);
     
-    // Fetch requests that are not marked as deleted
+    // Then fetch requests for display
     const { data, error } = await supabase
       .from('custom_requests')
       .select('*, profiles(full_name)', { count: 'exact' })
-      .not('status', 'eq', 'deleted') // Exclude deleted requests
       .order('created_at', { ascending: false });
       
-    console.log('Fetch result (after filtering):', { data, error, dataLength: data?.length });
+    console.log('Fetch result for display:', { data, error, dataLength: data?.length });
     
     if (error) {
       showError('Could not fetch custom requests.');
@@ -127,19 +122,31 @@ const CustomRequestsList = () => {
     console.log('Attempting to delete request with ID:', requestId);
     
     try {
-      // Instead of actual deletion, let's try marking as deleted
+      // Try actual deletion first
       const { data, error } = await supabase
         .from('custom_requests')
-        .update({ status: 'deleted' }) // Mark as deleted instead of removing
+        .delete()
         .eq('id', requestId)
         .select();
 
-      console.log('Soft delete operation result:', { data, error });
+      console.log('Actual delete operation result:', { data, error });
       
       if (error) {
-        showError('Failed to delete request: ' + error.message);
-        console.error('Delete error:', error);
-        return;
+        console.error('Actual delete failed, trying soft delete:', error);
+        // If actual deletion fails, try soft delete
+        const { data: softData, error: softError } = await supabase
+          .from('custom_requests')
+          .update({ status: 'deleted' })
+          .eq('id', requestId)
+          .select();
+
+        console.log('Soft delete operation result:', { softData, softError });
+        
+        if (softError) {
+          showError('Failed to delete request: ' + softError.message);
+          console.error('Soft delete error:', softError);
+          return;
+        }
       }
 
       showSuccess('Request deleted successfully.');
@@ -231,7 +238,6 @@ const CustomRequestsList = () => {
                           <SelectItem value="shipped">Shipped</SelectItem>
                           <SelectItem value="completed">Completed</SelectItem>
                           <SelectItem value="rejected">Rejected</SelectItem>
-                          {/* <SelectItem value="deleted">Deleted</SelectItem> - Hidden from UI */}
                         </SelectContent>
                       </Select>
                     </TableCell>
