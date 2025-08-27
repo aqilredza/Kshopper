@@ -117,51 +117,45 @@ const CustomRequestsList = () => {
 
     console.log('Attempting to delete request with ID:', requestId);
     
-    // First, let's check if the record exists
-    const { data: checkData, error: checkError } = await supabase
-      .from('custom_requests')
-      .select('*')
-      .eq('id', requestId);
+    try {
+      // Perform the deletion
+      const { data, error } = await supabase
+        .from('custom_requests')
+        .delete()
+        .eq('id', requestId);
+
+      console.log('Delete operation result:', { data, error });
       
-    console.log('Pre-delete check:', { checkData, checkError });
-    
-    if (checkError) {
-      showError('Error checking request.');
-      console.error('Check error:', checkError);
-      return;
-    }
-    
-    if (!checkData || checkData.length === 0) {
-      showError('Request not found.');
-      console.log('Request not found, removing from UI');
-      setRequests(prev => prev.filter(req => req.id !== requestId));
-      return;
-    }
+      if (error) {
+        showError('Failed to delete request: ' + error.message);
+        console.error('Delete error:', error);
+        return;
+      }
+      
+      // Verify deletion by trying to fetch the record
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('custom_requests')
+        .select('*')
+        .eq('id', requestId);
+        
+      console.log('Verification result:', { verifyData, verifyError });
+      
+      if (verifyError) {
+        console.error('Verification error:', verifyError);
+      } else if (verifyData && verifyData.length > 0) {
+        showError('Request was not deleted properly.');
+        console.log('Record still exists after deletion attempt');
+        return;
+      }
 
-    // Now perform the actual deletion
-    const { data, error } = await supabase
-      .from('custom_requests')
-      .delete()
-      .eq('id', requestId)
-      .select();
-
-    console.log('Delete operation result:', { data, error });
-    
-    if (error) {
-      showError('Failed to delete request.');
-      console.error('Delete error:', error);
-    } else {
       showSuccess('Request deleted successfully.');
       console.log('Successfully deleted request, updating UI');
-      // Simple approach: just filter out the deleted request
+      // Update UI immediately
       setRequests(prev => prev.filter(req => req.id !== requestId));
-      console.log('UI updated, current requests count:', requests.length - 1);
-      
-      // Force a complete refresh after a short delay
-      setTimeout(async () => {
-        console.log('Forcing complete refresh after deletion');
-        await fetchRequests();
-      }, 500);
+      console.log('UI updated');
+    } catch (error) {
+      showError('Failed to delete request.');
+      console.error('Delete error:', error);
     }
   };
 
