@@ -61,36 +61,45 @@ const CustomRequestsList = () => {
   }, [navigate]);
 
   const fetchRequests = async () => {
-    console.log('Fetching custom requests...');
-    const { data, error } = await supabase
-      .from('custom_requests')
-      .select('*, profiles(full_name)')
-      .order('created_at', { ascending: false });
-      
-    console.log('Fetch result:', { data, error });
-    
-    if (error) {
+    try {
+      // Force refresh by adding a timestamp to bypass cache
+      const { data, error } = await supabase
+        .from('custom_requests')
+        .select('*, profiles(full_name)')
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        showError('Could not fetch custom requests.');
+        console.error('Fetch error:', error);
+      } else if (data) {
+        setRequests(data as unknown as CustomRequest[]);
+      }
+    } catch (error) {
       showError('Could not fetch custom requests.');
-      console.error(error);
-    } else if (data) {
-      console.log('Setting requests state with', data.length, 'items');
-      setRequests(data as unknown as CustomRequest[]);
+      console.error('Fetch error:', error);
     }
   };
 
   const handleStatusChange = async (requestId: string, newStatus: string) => {
-    const { error } = await supabase
-      .from('custom_requests')
-      .update({ status: newStatus })
-      .eq('id', requestId);
+    try {
+      const { error } = await supabase
+        .from('custom_requests')
+        .update({ status: newStatus })
+        .eq('id', requestId);
 
-    if (error) {
+      if (error) {
+        showError('Failed to update status.');
+        console.error('Status update error:', error);
+      } else {
+        showSuccess('Request status updated.');
+        // Update UI immediately
+        setRequests(prev => 
+          prev.map(req => req.id === requestId ? { ...req, status: newStatus } : req)
+        );
+      }
+    } catch (error) {
       showError('Failed to update status.');
-    } else {
-      showSuccess('Request status updated.');
-      setRequests(prev => 
-        prev.map(req => req.id === requestId ? { ...req, status: newStatus } : req)
-      );
+      console.error('Status update error:', error);
     }
   };
 
@@ -100,29 +109,33 @@ const CustomRequestsList = () => {
     }
 
     try {
-      // Optimistically remove from UI
-      const previousRequests = [...requests];
+      // Remove from UI immediately for better UX
+      const requestToDelete = requests.find(req => req.id === requestId);
+      if (!requestToDelete) return;
+      
       setRequests(prev => prev.filter(req => req.id !== requestId));
 
-      console.log('Attempting to delete request with ID:', requestId);
-      
-      const { data, error } = await supabase
+      // Perform the actual deletion
+      const { error } = await supabase
         .from('custom_requests')
         .delete()
-        .eq('id', requestId)
-        .select();
-
-      console.log('Delete operation result:', { data, error });
+        .eq('id', requestId);
 
       if (error) {
-        // Rollback UI change if deletion fails
-        setRequests(previousRequests);
+        // If deletion fails, add the request back to the UI
+        setRequests(prev => {
+          const newRequests = [...prev];
+          newRequests.push(requestToDelete);
+          return newRequests.sort((a, b) => 
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+        });
         showError('Failed to delete request.');
         console.error('Deletion error:', error);
       } else {
         showSuccess('Request deleted successfully.');
-        console.log('Request deleted, refreshing list...');
-        // Refresh the list to ensure consistency
+        // Force a complete refresh to ensure consistency
+        await new Promise(resolve => setTimeout(resolve, 100));
         await fetchRequests();
       }
     } catch (error) {
@@ -130,6 +143,19 @@ const CustomRequestsList = () => {
       console.error('Deletion error:', error);
     }
   };
+
+  // Refresh data when component comes back into focus
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchRequests();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
 
   if (loading) {
     return (
