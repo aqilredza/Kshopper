@@ -113,7 +113,8 @@ const CustomRequestDetail = () => {
       showError('Failed to delete request.');
     } else {
       showSuccess('Request deleted successfully.');
-      navigate('/admin/custom-requests');
+      // Navigate back to the custom requests list with a refresh flag
+      navigate('/admin/custom-requests', { state: { refresh: true } });
     }
   };
 

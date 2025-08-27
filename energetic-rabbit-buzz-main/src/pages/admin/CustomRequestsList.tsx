@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { Loader2, Eye, Trash2 } from 'lucide-react';
@@ -42,6 +42,7 @@ const ADMIN_EMAIL = "mredza31@gmail.com";
 
 const CustomRequestsList = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState<CustomRequest[]>([]);
@@ -59,6 +60,11 @@ const CustomRequestsList = () => {
     };
     getInitialData();
   }, [navigate]);
+
+  // Refresh data when returning from detail view or when location changes
+  useEffect(() => {
+    fetchRequests();
+  }, [location]);
 
   const fetchRequests = async () => {
     const { data, error } = await supabase
