@@ -77,10 +77,11 @@ const CustomRequestsList = () => {
     const { data: sessionData } = await supabase.auth.getSession();
     console.log('Current session:', sessionData);
     
-    // Force a fresh fetch by adding cache-busting parameters
+    // Fetch requests that are not marked as deleted
     const { data, error } = await supabase
       .from('custom_requests')
       .select('*, profiles(full_name)', { count: 'exact' })
+      .neq('status', 'deleted') // Exclude deleted requests
       .order('created_at', { ascending: false });
       
     console.log('Fetch result:', { data, error, dataLength: data?.length });
@@ -118,33 +119,17 @@ const CustomRequestsList = () => {
     console.log('Attempting to delete request with ID:', requestId);
     
     try {
-      // Perform the deletion
+      // Instead of actual deletion, let's try marking as deleted
       const { data, error } = await supabase
         .from('custom_requests')
-        .delete()
+        .update({ status: 'deleted' }) // Mark as deleted instead of removing
         .eq('id', requestId);
 
-      console.log('Delete operation result:', { data, error });
+      console.log('Soft delete operation result:', { data, error });
       
       if (error) {
         showError('Failed to delete request: ' + error.message);
         console.error('Delete error:', error);
-        return;
-      }
-      
-      // Verify deletion by trying to fetch the record
-      const { data: verifyData, error: verifyError } = await supabase
-        .from('custom_requests')
-        .select('*')
-        .eq('id', requestId);
-        
-      console.log('Verification result:', { verifyData, verifyError });
-      
-      if (verifyError) {
-        console.error('Verification error:', verifyError);
-      } else if (verifyData && verifyData.length > 0) {
-        showError('Request was not deleted properly.');
-        console.log('Record still exists after deletion attempt');
         return;
       }
 
@@ -231,6 +216,7 @@ const CustomRequestsList = () => {
                           <SelectItem value="shipped">Shipped</SelectItem>
                           <SelectItem value="completed">Completed</SelectItem>
                           <SelectItem value="rejected">Rejected</SelectItem>
+                          {/* <SelectItem value="deleted">Deleted</SelectItem> - Hidden from UI */}
                         </SelectContent>
                       </Select>
                     </TableCell>
