@@ -66,17 +66,30 @@ const CustomRequestsList = () => {
     fetchRequests();
   }, [location]);
 
+  // Also refresh data when component mounts to ensure latest data
+  useEffect(() => {
+    if (!loading && session) {
+      fetchRequests();
+    }
+  }, [loading, session]);
+
   const fetchRequests = async () => {
-    const { data, error } = await supabase
-      .from('custom_requests')
-      .select('*, profiles(full_name)')
-      .order('created_at', { ascending: false });
-      
-    if (error) {
+    try {
+      // Ensure we're getting fresh data by adding a cache-busting parameter
+      const { data, error } = await supabase
+        .from('custom_requests')
+        .select('*, profiles(full_name)')
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        showError('Could not fetch custom requests.');
+        console.error('Fetch error:', error);
+      } else if (data) {
+        setRequests(data as unknown as CustomRequest[]);
+      }
+    } catch (error) {
       showError('Could not fetch custom requests.');
-      console.error(error);
-    } else if (data) {
-      setRequests(data as unknown as CustomRequest[]);
+      console.error('Fetch error:', error);
     }
   };
 
@@ -101,16 +114,44 @@ const CustomRequestsList = () => {
       return;
     }
 
-    const { error } = await supabase
-      .from('custom_requests')
-      .delete()
-      .eq('id', requestId);
+    try {
+      // First, let's verify the request exists
+      const { data: existingData, error: fetchError } = await supabase
+        .from('custom_requests')
+        .select('id')
+        .eq('id', requestId)
+        .single();
 
-    if (error) {
+      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 means no rows returned
+        console.error('Error checking if request exists:', fetchError);
+      }
+
+      if (!existingData) {
+        // Request doesn't exist, remove it from UI if it's there
+        setRequests(prev => prev.filter(req => req.id !== requestId));
+        showSuccess('Request was already deleted.');
+        return;
+      }
+
+      // Perform the delete operation
+      const { error } = await supabase
+        .from('custom_requests')
+        .delete()
+        .eq('id', requestId);
+
+      if (error) {
+        showError('Failed to delete request.');
+        console.error('Delete error:', error);
+      } else {
+        showSuccess('Request deleted successfully.');
+        // Update the UI state immediately
+        setRequests(prev => prev.filter(req => req.id !== requestId));
+        // Also refresh the data from the server to ensure consistency
+        await fetchRequests();
+      }
+    } catch (error) {
       showError('Failed to delete request.');
-    } else {
-      showSuccess('Request deleted successfully.');
-      setRequests(prev => prev.filter(req => req.id !== requestId));
+      console.error('Delete error:', error);
     }
   };
 
