@@ -77,14 +77,22 @@ const CustomRequestsList = () => {
     const { data: sessionData } = await supabase.auth.getSession();
     console.log('Current session:', sessionData);
     
+    // First, let's fetch all requests to see what status values exist
+    const { data: allData } = await supabase
+      .from('custom_requests')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false });
+      
+    console.log('All requests (before filtering):', allData);
+    
     // Fetch requests that are not marked as deleted
     const { data, error } = await supabase
       .from('custom_requests')
       .select('*, profiles(full_name)', { count: 'exact' })
-      .neq('status', 'deleted') // Exclude deleted requests
+      .not('status', 'eq', 'deleted') // Exclude deleted requests
       .order('created_at', { ascending: false });
       
-    console.log('Fetch result:', { data, error, dataLength: data?.length });
+    console.log('Fetch result (after filtering):', { data, error, dataLength: data?.length });
     
     if (error) {
       showError('Could not fetch custom requests.');
@@ -123,7 +131,8 @@ const CustomRequestsList = () => {
       const { data, error } = await supabase
         .from('custom_requests')
         .update({ status: 'deleted' }) // Mark as deleted instead of removing
-        .eq('id', requestId);
+        .eq('id', requestId)
+        .select();
 
       console.log('Soft delete operation result:', { data, error });
       
@@ -138,6 +147,12 @@ const CustomRequestsList = () => {
       // Update UI immediately
       setRequests(prev => prev.filter(req => req.id !== requestId));
       console.log('UI updated');
+      
+      // Force refresh to verify the deletion worked
+      setTimeout(async () => {
+        console.log('Refreshing after deletion');
+        await fetchRequests();
+      }, 300);
     } catch (error) {
       showError('Failed to delete request.');
       console.error('Delete error:', error);
