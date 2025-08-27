@@ -61,45 +61,36 @@ const CustomRequestsList = () => {
   }, [navigate]);
 
   const fetchRequests = async () => {
-    try {
-      // Force refresh by adding a timestamp to bypass cache
-      const { data, error } = await supabase
-        .from('custom_requests')
-        .select('*, profiles(full_name)')
-        .order('created_at', { ascending: false });
-        
-      if (error) {
-        showError('Could not fetch custom requests.');
-        console.error('Fetch error:', error);
-      } else if (data) {
-        setRequests(data as unknown as CustomRequest[]);
-      }
-    } catch (error) {
+    console.log('Fetching custom requests...');
+    const { data, error } = await supabase
+      .from('custom_requests')
+      .select('*, profiles(full_name)')
+      .order('created_at', { ascending: false });
+      
+    console.log('Fetch result:', { data, error, dataLength: data?.length });
+    
+    if (error) {
       showError('Could not fetch custom requests.');
-      console.error('Fetch error:', error);
+      console.error(error);
+    } else if (data) {
+      setRequests(data as unknown as CustomRequest[]);
+      console.log('Requests updated in state, new count:', data.length);
     }
   };
 
   const handleStatusChange = async (requestId: string, newStatus: string) => {
-    try {
-      const { error } = await supabase
-        .from('custom_requests')
-        .update({ status: newStatus })
-        .eq('id', requestId);
+    const { error } = await supabase
+      .from('custom_requests')
+      .update({ status: newStatus })
+      .eq('id', requestId);
 
-      if (error) {
-        showError('Failed to update status.');
-        console.error('Status update error:', error);
-      } else {
-        showSuccess('Request status updated.');
-        // Update UI immediately
-        setRequests(prev => 
-          prev.map(req => req.id === requestId ? { ...req, status: newStatus } : req)
-        );
-      }
-    } catch (error) {
+    if (error) {
       showError('Failed to update status.');
-      console.error('Status update error:', error);
+    } else {
+      showSuccess('Request status updated.');
+      setRequests(prev => 
+        prev.map(req => req.id === requestId ? { ...req, status: newStatus } : req)
+      );
     }
   };
 
@@ -108,54 +99,27 @@ const CustomRequestsList = () => {
       return;
     }
 
-    try {
-      // Remove from UI immediately for better UX
-      const requestToDelete = requests.find(req => req.id === requestId);
-      if (!requestToDelete) return;
-      
-      setRequests(prev => prev.filter(req => req.id !== requestId));
+    console.log('Attempting to delete request with ID:', requestId);
+    
+    const { data, error } = await supabase
+      .from('custom_requests')
+      .delete()
+      .eq('id', requestId)
+      .select();
 
-      // Perform the actual deletion
-      const { error } = await supabase
-        .from('custom_requests')
-        .delete()
-        .eq('id', requestId);
-
-      if (error) {
-        // If deletion fails, add the request back to the UI
-        setRequests(prev => {
-          const newRequests = [...prev];
-          newRequests.push(requestToDelete);
-          return newRequests.sort((a, b) => 
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          );
-        });
-        showError('Failed to delete request.');
-        console.error('Deletion error:', error);
-      } else {
-        showSuccess('Request deleted successfully.');
-        // Force a complete refresh to ensure consistency
-        await new Promise(resolve => setTimeout(resolve, 100));
-        await fetchRequests();
-      }
-    } catch (error) {
+    console.log('Delete operation result:', { data, error });
+    
+    if (error) {
       showError('Failed to delete request.');
-      console.error('Deletion error:', error);
+      console.error('Delete error:', error);
+    } else {
+      showSuccess('Request deleted successfully.');
+      console.log('Successfully deleted request, updating UI');
+      // Simple approach: just filter out the deleted request
+      setRequests(prev => prev.filter(req => req.id !== requestId));
+      console.log('UI updated, current requests count:', requests.length - 1);
     }
   };
-
-  // Refresh data when component comes back into focus
-  useEffect(() => {
-    const handleFocus = () => {
-      fetchRequests();
-    };
-    
-    window.addEventListener('focus', handleFocus);
-    
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, []);
 
   if (loading) {
     return (
