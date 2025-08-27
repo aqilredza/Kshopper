@@ -73,6 +73,10 @@ const CustomRequestsList = () => {
   const fetchRequests = async () => {
     console.log('Fetching custom requests...');
     
+    // Let's also check the session to make sure we have the right permissions
+    const { data: sessionData } = await supabase.auth.getSession();
+    console.log('Current session:', sessionData);
+    
     // Force a fresh fetch by adding cache-busting parameters
     const { data, error } = await supabase
       .from('custom_requests')
@@ -113,6 +117,28 @@ const CustomRequestsList = () => {
 
     console.log('Attempting to delete request with ID:', requestId);
     
+    // First, let's check if the record exists
+    const { data: checkData, error: checkError } = await supabase
+      .from('custom_requests')
+      .select('*')
+      .eq('id', requestId);
+      
+    console.log('Pre-delete check:', { checkData, checkError });
+    
+    if (checkError) {
+      showError('Error checking request.');
+      console.error('Check error:', checkError);
+      return;
+    }
+    
+    if (!checkData || checkData.length === 0) {
+      showError('Request not found.');
+      console.log('Request not found, removing from UI');
+      setRequests(prev => prev.filter(req => req.id !== requestId));
+      return;
+    }
+
+    // Now perform the actual deletion
     const { data, error } = await supabase
       .from('custom_requests')
       .delete()
