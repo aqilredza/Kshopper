@@ -105,6 +105,10 @@ const CustomRequestsList = () => {
     } else {
       showSuccess('Request deleted successfully.');
       setRequests(prev => prev.filter(req => req.id !== requestId));
+      // Refresh the list after a short delay to ensure the deletion is processed
+      setTimeout(() => {
+        fetchRequests();
+      }, 500);
     }
   };
 
