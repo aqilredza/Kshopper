@@ -211,7 +211,7 @@ const Account = () => {
                       </TableHeader>
                       <TableBody>
                         {customRequests.map((request) => (
-                          <TableRow key={request.id}>
+                          <TableRow key={request.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/custom-request/${request.id}`)}>
                             <TableCell className="font-medium truncate max-w-xs">{request.product_description}</TableCell>
                             <TableCell>{format(new Date(request.created_at), 'PPP')}</TableCell>
                             <TableCell>

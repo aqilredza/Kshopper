@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -90,6 +90,24 @@ const CustomRequestsList = () => {
     }
   };
 
+  const handleDeleteRequest = async (requestId: string) => {
+    if (!window.confirm('Are you sure you want to delete this request? This action cannot be undone.')) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from('custom_requests')
+      .delete()
+      .eq('id', requestId);
+
+    if (error) {
+      showError('Failed to delete request.');
+    } else {
+      showSuccess('Request deleted successfully.');
+      setRequests(prev => prev.filter(req => req.id !== requestId));
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -117,6 +135,7 @@ const CustomRequestsList = () => {
                   <TableHead>Description</TableHead>
                   <TableHead>Image</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -132,7 +151,18 @@ const CustomRequestsList = () => {
                     <TableCell>
                       {request.image_url ? (
                         <a href={request.image_url} target="_blank" rel="noopener noreferrer">
-                          <img src={request.image_url} alt="Request" className="w-16 h-16 object-cover rounded-md" />
+                          <div className="w-16 h-16 rounded-md overflow-hidden">
+                            <img 
+                              src={request.image_url} 
+                              alt="Request" 
+                              className="w-full h-full object-cover" 
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.src = "/placeholder.svg";
+                                target.onerror = null;
+                              }}
+                            />
+                          </div>
                         </a>
                       ) : (
                         <img src="/placeholder.svg" alt="No Image" className="w-16 h-16 object-cover rounded-md bg-muted" />
@@ -152,6 +182,24 @@ const CustomRequestsList = () => {
                           <SelectItem value="rejected">Rejected</SelectItem>
                         </SelectContent>
                       </Select>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => navigate(`/admin/custom-requests/${request.id}`)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          onClick={() => handleDeleteRequest(request.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

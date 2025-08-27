@@ -1,24 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, ArrowLeft, ExternalLink, Trash2 } from 'lucide-react';
+import { Loader2, ArrowLeft, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { showError, showSuccess } from '@/utils/toast';
+import { showError } from '@/utils/toast';
 import { format } from 'date-fns';
-
-type Profile = {
-  full_name: string;
-  email: string;
-};
+import { useAuth } from '@/context/AuthContext';
 
 type CustomRequest = {
   id: string;
@@ -29,93 +18,45 @@ type CustomRequest = {
   image_url: string | null;
   product_link: string | null;
   notes: string | null;
-  profiles: Profile | null;
-  users: { email: string } | null;
 };
-
-const ADMIN_EMAIL = "mredza31@gmail.com";
 
 const CustomRequestDetail = () => {
   const { requestId } = useParams();
   const navigate = useNavigate();
+  const { session } = useAuth();
   const [request, setRequest] = useState<CustomRequest | null>(null);
   const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState<string>('');
 
   useEffect(() => {
     const fetchRequest = async () => {
       if (!requestId) {
-        navigate('/admin/custom-requests');
+        navigate('/account');
         return;
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user?.email !== ADMIN_EMAIL) {
+      if (!session) {
         navigate('/login');
         return;
       }
 
       const { data, error } = await supabase
         .from('custom_requests')
-        .select(`
-          *,
-          profiles (full_name),
-          users (email)
-        `)
+        .select('*')
         .eq('id', requestId)
+        .eq('user_id', session.user.id)
         .single();
 
       if (error || !data) {
         showError('Could not find the specified request.');
-        navigate('/admin/custom-requests');
+        navigate('/account');
       } else {
         setRequest(data as unknown as CustomRequest);
-        setStatus(data.status);
       }
       setLoading(false);
     };
 
     fetchRequest();
-  }, [requestId, navigate]);
-
-  const handleStatusChange = async (newStatus: string) => {
-    if (!requestId) return;
-
-    const { error } = await supabase
-      .from('custom_requests')
-      .update({ status: newStatus })
-      .eq('id', requestId);
-
-    if (error) {
-      showError('Failed to update status.');
-    } else {
-      showSuccess('Request status updated.');
-      setStatus(newStatus);
-      if (request) {
-        setRequest({ ...request, status: newStatus });
-      }
-    }
-  };
-
-  const handleDeleteRequest = async () => {
-    if (!requestId) return;
-
-    if (!window.confirm('Are you sure you want to delete this request? This action cannot be undone.')) {
-      return;
-    }
-
-    const { error } = await supabase
-      .from('custom_requests')
-      .delete()
-      .eq('id', requestId);
-
-    if (error) {
-      showError('Failed to delete request.');
-    } else {
-      showSuccess('Request deleted successfully.');
-      navigate('/admin/custom-requests');
-    }
-  };
+  }, [requestId, navigate, session]);
 
   if (loading) {
     return (
@@ -131,16 +72,10 @@ const CustomRequestDetail = () => {
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
-      <div className="flex justify-between items-center mb-4">
-        <Button variant="ghost" onClick={() => navigate('/admin/custom-requests')}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to All Requests
-        </Button>
-        <Button variant="destructive" onClick={handleDeleteRequest}>
-          <Trash2 className="mr-2 h-4 w-4" />
-          Delete Request
-        </Button>
-      </div>
+      <Button variant="ghost" onClick={() => navigate('/account')} className="mb-4">
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back to Account
+      </Button>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
           <Card>
@@ -178,33 +113,14 @@ const CustomRequestDetail = () => {
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="font-semibold">Status</span>
-                <Select value={status} onValueChange={handleStatusChange}>
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder="Set status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="approved">Approved</SelectItem>
-                    <SelectItem value="ordered">Ordered</SelectItem>
-                    <SelectItem value="shipped">Shipped</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="rejected">Rejected</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Badge variant={request.status === 'pending' ? 'secondary' : 'default'}>
+                  {request.status}
+                </Badge>
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-semibold">Category</span>
                 <span>{request.category || 'N/A'}</span>
               </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>User</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <p><span className="font-semibold">Name:</span> {request.profiles?.full_name || 'N/A'}</p>
-              <p><span className="font-semibold">Email:</span> {request.users?.email || 'N/A'}</p>
             </CardContent>
           </Card>
           {request.image_url && (

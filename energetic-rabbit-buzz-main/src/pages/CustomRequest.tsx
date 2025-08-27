@@ -54,6 +54,7 @@ const CustomRequest: React.FC = () => {
     const fileExtension = selectedFile.name.split(".").pop();
     const filePath = `${session.user.id}/${Date.now()}.${fileExtension}`;
 
+    console.log("Uploading file to:", filePath);
     const { data, error } = await supabase.storage
       .from("custom_request_images")
       .upload(filePath, selectedFile, {
@@ -64,8 +65,9 @@ const CustomRequest: React.FC = () => {
             setUploadProgress(Math.round((event.loaded / event.totalBytes) * 100));
           }
         },
-      } as any); // Cast to any to resolve TypeScript error
+      } as any);
 
+    console.log("Upload result:", { data, error });
     if (error) {
       toast.error("Image upload failed: " + error.message);
       setUploading(false);
@@ -73,16 +75,12 @@ const CustomRequest: React.FC = () => {
       return;
     }
 
-    const { data: publicUrlData } = supabase.storage
-      .from("custom_request_images")
-      .getPublicUrl(filePath);
-
-    if (publicUrlData) {
-      setImageUrl(publicUrlData.publicUrl);
-      toast.success("Image uploaded successfully!");
-    } else {
-      toast.error("Failed to get public URL for the uploaded image.");
-    }
+    // Generate public URL - using the bucket and file path directly
+    const publicUrl = `${supabase.supabaseUrl}/storage/v1/object/public/custom_request_images/${filePath}`;
+    
+    console.log("Generated public URL:", publicUrl);
+    setImageUrl(publicUrl);
+    toast.success("Image uploaded successfully!");
     setUploading(false);
     setUploadProgress(0);
   };
@@ -106,6 +104,8 @@ const CustomRequest: React.FC = () => {
     }
 
     setIsSubmitting(true);
+    // Debug: log the imageUrl before submitting
+    console.log("Submitting custom request with imageUrl:", imageUrl);
     const { data, error } = await supabase
       .from("custom_requests")
       .insert({

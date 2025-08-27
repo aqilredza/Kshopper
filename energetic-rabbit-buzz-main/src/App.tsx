@@ -6,6 +6,7 @@ import {
 import Index from "./pages/Index";
 import About from "./pages/About";
 import CustomRequest from "./pages/CustomRequest";
+import CustomRequestDetail from "./pages/CustomRequestDetail";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import CategoryPage from "./pages/CategoryPage";
@@ -20,6 +21,7 @@ import AdminHotItems from "./pages/AdminHotItems";
 import AddProductPage from "./pages/admin/AddProductPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import CustomRequestsList from "./pages/admin/CustomRequestsList";
+import AdminCustomRequestDetail from "./pages/admin/CustomRequestDetail";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "@/context/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
@@ -41,6 +43,7 @@ function App() {
               <Route path="/" element={<Index />} />
               <Route path="/about" element={<About />} />
               <Route path="/custom-request" element={<CustomRequest />} />
+              <Route path="/custom-request/:requestId" element={<CustomRequestDetail />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/category/:categoryName" element={<CategoryPage />} />
@@ -54,6 +57,7 @@ function App() {
               <Route path="/admin/hot-items" element={<AdminHotItems />} />
               <Route path="/admin/products/new" element={<AddProductPage />} />
               <Route path="/admin/custom-requests" element={<CustomRequestsList />} />
+              <Route path="/admin/custom-requests/:requestId" element={<AdminCustomRequestDetail />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
