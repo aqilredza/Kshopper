@@ -130,6 +130,12 @@ const CustomRequestsList = () => {
       // Simple approach: just filter out the deleted request
       setRequests(prev => prev.filter(req => req.id !== requestId));
       console.log('UI updated, current requests count:', requests.length - 1);
+      
+      // Force a complete refresh after a short delay
+      setTimeout(async () => {
+        console.log('Forcing complete refresh after deletion');
+        await fetchRequests();
+      }, 500);
     }
   };
 
