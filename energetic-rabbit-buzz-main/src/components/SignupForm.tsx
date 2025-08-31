@@ -22,6 +22,7 @@ const formSchema = z.object({
   fullName: z.string().min(1, { message: 'Full name is required.' }),
   email: z.string().email({ message: 'Invalid email address.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
+  contactNumber: z.string().min(1, { message: 'Contact number is required.' }),
 });
 
 const SignupForm = () => {
@@ -34,17 +35,23 @@ const SignupForm = () => {
       fullName: '',
       email: '',
       password: '',
+      contactNumber: '',
     },
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
+    
+    // Format the contact number with country code
+    const fullContactNumber = `+60${values.contactNumber}`;
+    
     const { error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
       options: {
         data: {
           full_name: values.fullName,
+          contact_number: fullContactNumber,
         },
       },
     });
@@ -66,7 +73,7 @@ const SignupForm = () => {
           name="fullName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Full Name</FormLabel>
+              <FormLabel>Full Name <span className="text-red-500">*</span></FormLabel>
               <FormControl>
                 <Input placeholder="Your Name" {...field} />
               </FormControl>
@@ -79,9 +86,31 @@ const SignupForm = () => {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>Email <span className="text-red-500">*</span></FormLabel>
               <FormControl>
                 <Input placeholder="you@example.com" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="contactNumber"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Contact Number <span className="text-red-500">*</span></FormLabel>
+              <FormControl>
+                <div className="flex gap-2">
+                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-sm">
+                    +60
+                  </span>
+                  <Input 
+                    placeholder="123456789" 
+                    {...field} 
+                    className="rounded-l-none"
+                  />
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -92,7 +121,7 @@ const SignupForm = () => {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>Password <span className="text-red-500">*</span></FormLabel>
               <FormControl>
                 <div className="relative">
                   <Input

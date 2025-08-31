@@ -192,8 +192,11 @@ const ManageOrders = () => {
     })
   );
         
+        // Filter out any orders with null IDs (safeguard)
+        const validOrders = ordersWithItems.filter((order: Order) => order.id);
+        
         // Add debugging for order items
-        ordersWithItems.forEach((order: Order) => {
+        validOrders.forEach((order: Order) => {
           console.log(`Order ${order.id} has ${order.order_items?.length || 0} items:`);
           order.order_items?.forEach((item, index) => {
             console.log(`  Item ${index + 1}:`, {
@@ -207,8 +210,8 @@ const ManageOrders = () => {
           });
         });
         
-        console.log('Final orders data:', ordersWithItems);
-        setOrders(ordersWithItems);
+        console.log('Final orders data:', validOrders);
+        setOrders(validOrders);
       } catch (err) {
         console.error('Unexpected error:', err);
         showError('An unexpected error occurred while fetching orders.');
@@ -255,8 +258,8 @@ const ManageOrders = () => {
                 </TableHeader>
                 <TableBody>
                   {orders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium truncate max-w-[120px] sm:max-w-xs">{order.id}</TableCell>
+                    <TableRow key={order.id || Math.random()}>
+                      <TableCell className="font-medium truncate max-w-[120px] sm:max-w-xs">{order.id || 'Unknown ID'}</TableCell>
                       <TableCell className="truncate max-w-[120px] sm:max-w-xs">{order.profiles?.full_name || order.user_id}</TableCell>
                       <TableCell>{order.profiles?.contact_number || 'N/A'}</TableCell>
                       <TableCell>
@@ -278,12 +281,12 @@ const ManageOrders = () => {
                           </DialogTrigger>
                           <DialogContent className="max-w-3xl max-h-[80vh]">
                             <DialogHeader>
-                              <DialogTitle>Order Items - {order.id.substring(0, 8)}</DialogTitle>
+                              <DialogTitle>Order Items - {order.id ? order.id.substring(0, 8) : 'Unknown'}</DialogTitle>
                             </DialogHeader>
                             <ScrollArea className="h-[60vh] pr-4">
                               <div className="space-y-4">
                                 {order.order_items && order.order_items.length > 0 ? (
-                                  order.order_items.map((item) => (
+                                  order.order_items.filter(item => item.id).map((item) => (
                                     <div key={item.id} className="flex items-center gap-4 p-4 border rounded-lg">
                                       <div className="w-16 h-16 rounded-md overflow-hidden flex-shrink-0">
                                         <img
@@ -303,7 +306,7 @@ const ManageOrders = () => {
                                           Quantity: {item.quantity} × MYR {item.price.toFixed(2)} = MYR {(item.quantity * item.price).toFixed(2)}
                                         </p>
                                         <p className="text-xs text-muted-foreground mt-1">
-                                          Item ID: {item.menu_item_id.substring(0, 8)}...
+                                          Item ID: {item.menu_item_id ? item.menu_item_id.substring(0, 8) + '...' : 'Unknown'}
                                         </p>
                                       </div>
                                     </div>

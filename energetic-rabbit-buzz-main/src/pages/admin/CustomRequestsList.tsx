@@ -180,7 +180,7 @@ const CustomRequestsList = () => {
     // Fetch requests for display, excluding those with status 'deleted'
     const { data, error } = await supabase
       .from('custom_requests')
-      .select('*, profiles(full_name)', { count: 'exact' })
+      .select('*, profiles(full_name, contact_number)', { count: 'exact', head: false })
       .neq('status', 'deleted')
       .order('created_at', { ascending: false });
 
@@ -196,6 +196,7 @@ const CustomRequestsList = () => {
       if (savedDeleted) {
         try {
           deletedIds = new Set(JSON.parse(savedDeleted));
+          console.log('Loaded deleted requests from localStorage:', Array.from(deletedIds));
         } catch (e) {
           console.error('Error parsing deleted requests:', e);
         }
@@ -203,9 +204,25 @@ const CustomRequestsList = () => {
       
       // Filter out deleted requests
       const filteredData = data.filter(req => !deletedIds.has(req.id));
+      console.log('Filtered data (removed deleted):', filteredData.length, 'original:', data.length);
+      console.log('Setting requests state:', filteredData);
+      
+      // Log each request's status for debugging
+      filteredData.forEach(req => {
+        console.log(`Request ${req.id}: status = ${req.status}`);
+      });
+      
       setRequests(filteredData as unknown as CustomRequest[]);
       console.log('Requests updated in state, new count:', filteredData.length);
     }
+  };
+
+  const refreshRequests = async () => {
+    console.log('Manually refreshing requests...');
+    console.log('Current requests in state before refresh:', requests);
+    setLoading(true);
+    await fetchRequests();
+    setLoading(false);
   };
 
   const fetchMessages = async (requestId: string) => {
@@ -322,18 +339,45 @@ const CustomRequestsList = () => {
   };
 
   const handleStatusChange = async (requestId: string, newStatus: string) => {
-    const { error } = await supabase
-      .from('custom_requests')
-      .update({ status: newStatus })
-      .eq('id', requestId);
+    console.log('Attempting to update request status:', { requestId, newStatus });
+    
+    try {
+      // Perform the update - the RLS policies will allow this for admins
+      console.log('Performing update operation...');
+      const { data, error } = await supabase
+        .from('custom_requests')
+        .update({ status: newStatus })
+        .eq('id', requestId)
+        .select();
 
-    if (error) {
-      showError('Failed to update status.');
-    } else {
-      showSuccess('Request status updated.');
-      setRequests(prev => 
-        prev.map(req => req.id === requestId ? { ...req, status: newStatus } : req)
-      );
+      console.log('Status update result:', { data, error });
+
+      if (error) {
+        console.error('Failed to update status:', error);
+        showError('Failed to update status: ' + error.message);
+      } else {
+        console.log('Status update successful:', data);
+        if (data && data.length > 0) {
+          console.log('Updated request data from DB:', data[0]);
+        }
+        showSuccess('Request status updated.');
+        // Update the request in the local state
+        setRequests(prev => {
+          const updatedRequests = prev.map(req => {
+            if (req.id === requestId) {
+              console.log('Updating request in state:', req.id, 'from', req.status, 'to', newStatus);
+              const updatedReq = { ...req, status: newStatus };
+              console.log('Updated request object:', updatedReq);
+              return updatedReq;
+            }
+            return req;
+          });
+          return updatedRequests;
+        });
+      }
+    } catch (err) {
+      console.error('Unexpected error updating status:', err);
+      showError('An unexpected error occurred while updating the status.');
     }
   };
 
@@ -388,8 +432,21 @@ const CustomRequestsList = () => {
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
       <Card>
         <CardHeader>
-          <CardTitle className="text-3xl font-black uppercase">Custom Requests</CardTitle>
-          <CardDescription>Review and manage user-submitted product requests.</CardDescription>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-3xl font-black uppercase">Custom Requests</CardTitle>
+              <CardDescription>Review and manage user-submitted product requests.</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={refreshRequests}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                <path d="M21 3v5h-5"/>
+                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                <path d="M3 21v-5h5"/>
+              </svg>
+              Refresh
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {requests.length === 0 ? (
@@ -400,6 +457,7 @@ const CustomRequestsList = () => {
                 <TableRow>
                   <TableHead>Submitted At</TableHead>
                   <TableHead>User</TableHead>
+                  <TableHead>Contact</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Image</TableHead>
                   <TableHead>Status</TableHead>
@@ -411,6 +469,7 @@ const CustomRequestsList = () => {
                   <TableRow key={request.id}>
                     <TableCell>{format(new Date(request.created_at), 'PPp')}</TableCell>
                     <TableCell>{request.profiles?.full_name || 'N/A'}</TableCell>
+                    <TableCell>{request.profiles?.contact_number || 'N/A'}</TableCell>
                     <TableCell className="max-w-xs">
                       <p className="font-medium truncate">{request.product_description}</p>
                       {request.product_link && <a href={request.product_link} target="_blank" rel="noopener noreferrer" className="text-primary text-sm hover:underline">Product Link</a>}
@@ -437,21 +496,47 @@ const CustomRequestsList = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Select value={request.status} onValueChange={(value) => handleStatusChange(request.id, value)}>
-                        <SelectTrigger className="w-[120px]">
-                          <SelectValue placeholder="Set status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="approved">Approved</SelectItem>
-                          <SelectItem value="ordered">Ordered</SelectItem>
-                          <SelectItem value="shipped">Shipped</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
-                          <SelectItem value="rejected">Rejected</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="flex items-center gap-2">
+                        <Select value={request.status} onValueChange={(value) => {
+                          console.log('Status select changed:', { requestId: request.id, oldStatus: request.status, newStatus: value });
+                          handleStatusChange(request.id, value);
+                        }}>
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue placeholder="Set status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="approved">Approved</SelectItem>
+                            <SelectItem value="ordered">Ordered</SelectItem>
+                            <SelectItem value="shipped">Shipped</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                            <SelectItem value="rejected">Rejected</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <span className="text-xs text-muted-foreground">DB: {request.status}</span>
+                      </div>
                     </TableCell>
                     <TableCell className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={async () => {
+                          console.log('Force refreshing single request:', request.id);
+                          const { data, error } = await supabase
+                            .from('custom_requests')
+                            .select('*')
+                            .eq('id', request.id)
+                            .single();
+                          if (data) {
+                            console.log('Fetched latest request data:', data);
+                            setRequests(prev => 
+                              prev.map(req => req.id === request.id ? data as unknown as CustomRequest : req)
+                            );
+                          }
+                        }}
+                      >
+                        ↻
+                      </Button>
                       <Dialog open={openChatRequestId === request.id} onOpenChange={(open) => {
                         if (!open) setOpenChatRequestId(null);
                       }}>

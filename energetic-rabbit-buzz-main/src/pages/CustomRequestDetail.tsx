@@ -51,36 +51,86 @@ const CustomRequestDetail = () => {
   const [newMessage, setNewMessage] = useState('');
   const [isChatOpen, setIsChatOpen] = useState(false);
   const messageChannel = useRef<any>(null);
+  const requestChannel = useRef<any>(null);
 
   useEffect(() => {
     const fetchRequest = async () => {
       if (!requestId) {
+        console.log('No requestId provided');
         navigate('/account');
         return;
       }
 
       if (!session) {
+        console.log('No session available');
         navigate('/login');
         return;
       }
 
+      console.log('Fetching request data for ID:', requestId, 'User ID:', session.user.id);
+      
       const { data, error } = await supabase
         .from('custom_requests')
-        .select('*')
+        .select('*', { head: false })
         .eq('id', requestId)
         .eq('user_id', session.user.id)
         .single();
 
+      console.log('Request fetch result:', { data, error });
+
       if (error || !data) {
+        console.error('Failed to fetch request:', error);
         showError('Could not find the specified request.');
         navigate('/account');
       } else {
+        console.log('Setting request data:', data);
+        console.log('Current request status in state:', request?.status, 'New status from DB:', data.status);
         setRequest(data as unknown as CustomRequest);
       }
       setLoading(false);
     };
 
     fetchRequest();
+    
+    // Set up real-time subscription for request updates
+    if (requestId && session) {
+      console.log('Setting up real-time subscription for request:', requestId);
+      
+      // Remove existing channel if it exists
+      if (requestChannel.current) {
+        console.log('Removing existing channel');
+        supabase.removeChannel(requestChannel.current);
+      }
+      
+      requestChannel.current = supabase
+        .channel(`request-changes-${requestId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'custom_requests',
+            filter: `id=eq.${requestId}`
+          },
+          (payload) => {
+            console.log('Received real-time update for request:', payload);
+            console.log('Old status:', request?.status, 'New status:', payload.new.status);
+            // Update the request in state when it's updated
+            setRequest(payload.new as unknown as CustomRequest);
+          }
+        )
+        .subscribe((status) => {
+          console.log('Real-time subscription status:', status);
+        });
+    }
+    
+    // Cleanup function
+    return () => {
+      if (requestChannel.current) {
+        console.log('Cleaning up real-time subscription');
+        supabase.removeChannel(requestChannel.current);
+      }
+    };
   }, [requestId, navigate, session]);
 
   useEffect(() => {
@@ -270,9 +320,24 @@ const CustomRequestDetail = () => {
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="font-semibold">Status</span>
-                <Badge variant={request.status === 'pending' ? 'secondary' : 'default'}>
-                  {request.status}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant={request.status === 'pending' ? 'secondary' : 'default'}>
+                    {request.status}
+                  </Badge>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={fetchRequest}
+                    className="h-6 w-6 p-0"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                      <path d="M21 3v5h-5"/>
+                      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                      <path d="M3 21v-5h5"/>
+                    </svg>
+                  </Button>
+                </div>
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-semibold">Category</span>
