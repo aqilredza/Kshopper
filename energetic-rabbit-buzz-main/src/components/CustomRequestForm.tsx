@@ -61,7 +61,7 @@ const CustomRequestForm = () => {
     if (dbError) {
       setError("Failed to submit request: " + dbError.message);
     } else {
-      alert("Request submitted successfully!");
+      alert("Thank you for your order. The admin team has received your request and will review it shortly. We will provide you with an update via WhatsApp on your items");
     }
   };
 

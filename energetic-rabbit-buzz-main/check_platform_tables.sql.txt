@@ -1,0 +1,18 @@
+-- Check what platform-related tables exist
+SELECT table_name 
+FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name LIKE '%platform%'
+ORDER BY table_name;
+
+-- Check what columns exist in restaurant_platforms
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_name = 'restaurant_platforms'
+ORDER BY ordinal_position;
+
+-- Check what columns exist in platforms table (if it exists)
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_name = 'platforms'
+ORDER BY ordinal_position;

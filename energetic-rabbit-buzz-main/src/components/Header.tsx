@@ -34,22 +34,49 @@ const ADMIN_EMAIL = "mredza31@gmail.com";
 const Header = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<{ avatar_url: string; full_name: string } | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      if (session) {
+        // Fetch user profile when session is available
+        fetchUserProfile(session.user.id);
+      }
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session) {
+        // Fetch user profile when auth state changes
+        fetchUserProfile(session.user.id);
+      } else {
+        setProfile(null);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('avatar_url, full_name')
+        .eq('id', userId)
+        .single();
+
+      if (!error && data) {
+        setProfile(data);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
 
   const handleCartClick = () => {
     if (session) {
@@ -149,7 +176,7 @@ const Header = () => {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={session.user.user_metadata?.avatar_url} alt="User avatar" />
+                      <AvatarImage src={profile?.avatar_url || session.user.user_metadata?.avatar_url} alt="User avatar" />
                       <AvatarFallback>
                         <User />
                       </AvatarFallback>
@@ -183,6 +210,15 @@ const Header = () => {
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => navigate('/admin/hot-items')}>
                         Manage Hot Items
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/admin/custom-requests')}>
+                        Custom Requests
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/admin/manage-orders')}>
+                        Manage Orders
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/admin/products')}>
+                        Manage Products
                       </DropdownMenuItem>
                     </>
                   )}

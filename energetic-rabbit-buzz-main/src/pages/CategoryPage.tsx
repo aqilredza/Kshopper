@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import ProductCard, { ProductCardSkeleton } from '@/components/ProductCard';
+import { showError, showSuccess } from '@/utils/toast';
 import { Button } from '@/components/ui/button';
 import { Session } from '@supabase/supabase-js';
 
@@ -11,9 +12,6 @@ interface MenuItem {
   price: number;
   image_url: string;
   description: string;
-  restaurants: {
-    slug: string;
-  } | null;
 }
 
 const ADMIN_EMAIL = "mredza31@gmail.com";
@@ -42,35 +40,31 @@ const CategoryPage = () => {
     const fetchProducts = async () => {
       if (!categoryName) return;
       setLoading(true);
+      // Get the KShopper Platform id
+      const { data: platforms, error: platformError } = await supabase
+        .from('platforms')
+        .select('id')
+        .eq('name', 'KShopper Platform')
+        .limit(1);
+      if (platformError || !platforms || platforms.length === 0) {
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
+      const platformId = platforms[0].id;
       const { data, error } = await supabase
         .from('menu_items')
-        .select(`
-          id,
-          name,
-          price,
-          image_url,
-          description,
-          restaurant_platforms (
-            restaurants (
-              slug
-            )
-          )
-        `)
-        .eq('category', categoryName);
-
+        .select('id, name, price, image_url, description, platform_id, category')
+        .eq('category', categoryName)
+        .eq('platform_id', platformId);
       if (error) {
         console.error('Error fetching products:', error);
+        setProducts([]);
       } else {
-        // The type from Supabase is complex, so we cast it carefully
-        const formattedData = data.map((item: any) => ({
-          ...item,
-          restaurants: item.restaurant_platforms?.restaurants,
-        }));
-        setProducts(formattedData as MenuItem[]);
+        setProducts(data as MenuItem[]);
       }
       setLoading(false);
     };
-
     fetchProducts();
   }, [categoryName]);
 
@@ -78,9 +72,28 @@ const CategoryPage = () => {
     ? categoryName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
     : 'Category';
 
+  // Handler to delete a product
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this item?')) return;
+    const { error } = await supabase.from('menu_items').delete().eq('id', id);
+    if (error) {
+      showError('Failed to delete item.');
+    } else {
+      showSuccess('Item deleted.');
+      setProducts(products.filter((item) => item.id !== id));
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="text-4xl font-black uppercase mb-8">{formattedCategoryName}</h1>
+      {session?.user?.email === ADMIN_EMAIL && (
+        <div className="mb-6 flex justify-end">
+          <Button asChild>
+            <Link to={`/admin/products/new?category=${categoryName}`}>Add Product</Link>
+          </Button>
+        </div>
+      )}
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {Array.from({ length: 8 }).map((_, index) => (
@@ -90,13 +103,23 @@ const CategoryPage = () => {
       ) : products.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {products.map((product) => (
-            <ProductCard
-              key={product.id}
-              id={product.id}
-              name={product.name}
-              price={product.price}
-              imageUrl={product.image_url}
-            />
+            <div key={product.id} className="relative group">
+              <ProductCard
+                id={product.id}
+                name={product.name}
+                price={product.price}
+                imageUrl={product.image_url}
+              />
+              {session?.user?.email === ADMIN_EMAIL && (
+                <button
+                  onClick={() => handleDelete(product.id)}
+                  className="absolute top-2 right-2 bg-red-600 text-white rounded px-2 py-1 text-xs opacity-80 hover:opacity-100 z-10"
+                  title="Delete Item"
+                >
+                  Delete
+                </button>
+              )}
+            </div>
           ))}
         </div>
       ) : (

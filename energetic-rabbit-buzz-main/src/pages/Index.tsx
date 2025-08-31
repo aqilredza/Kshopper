@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import FeaturedCategories from "@/components/FeaturedCategories";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import HeroImage from "@/components/HeroImage";
 
 interface HotItem {
   id: string;
@@ -45,27 +46,41 @@ const Index = () => {
     >
       <main className="flex-1">
         <section
-          className="pt-20 pb-12"
+          className="pt-20 pb-12 relative overflow-hidden"
           style={{
             background: "linear-gradient(120deg, #fff 0%, #ffe5e5 40%, #e5f0ff 100%)"
           }}
         >
-          <div className="container mx-auto px-4 flex flex-col items-start justify-center">
-            <h1 className="text-5xl md:text-6xl font-black mb-6 leading-tight">
-              Your Gateway to<br />
-              <span className="bg-gradient-to-r from-red-500 via-pink-500 to-blue-600 bg-clip-text text-transparent">Korean Shopping</span>
-            </h1>
-            <p className="text-lg text-gray-700 mb-8 max-w-2xl">
-              Connect with trusted personal shoppers in Korea. Get authentic K-beauty, fashion, snacks, and lifestyle products delivered right to Malaysia.
-            </p>
-            <div className="flex gap-4">
-              <button className="bg-red-500 text-white font-bold py-3 px-8 rounded-lg shadow hover:bg-red-600 transition">Start Shopping</button>
-              <button className="bg-white border border-gray-300 text-gray-800 font-bold py-3 px-8 rounded-lg shadow hover:bg-gray-100 transition">Browse Stores</button>
+          <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between relative z-10">
+            <div className="flex-1 flex flex-col items-start justify-center">
+              <h1 className="text-5xl md:text-6xl font-black mb-6 leading-tight">
+                Your Gateway to<br />
+                <span className="bg-gradient-to-r from-red-500 via-pink-500 to-blue-600 bg-clip-text text-transparent">Korean Shopping</span>
+              </h1>
+              <p className="text-lg text-gray-700 mb-8 max-w-2xl">
+                Connect with trusted personal shoppers in Korea. Get authentic K-beauty, fashion, snacks, and lifestyle products delivered right to Malaysia.
+              </p>
+              <div className="flex gap-4">
+                <button 
+                  className="bg-red-500 text-white font-bold py-3 px-8 rounded-lg shadow hover:bg-red-600 transition"
+                  onClick={() => {
+                    const hotItemsSection = document.getElementById('hot-items');
+                    if (hotItemsSection) {
+                      hotItemsSection.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
+                >
+                  Start Shopping
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 flex justify-end items-center relative h-[400px]">
+              <HeroImage />
             </div>
           </div>
         </section>
 
-        <section className="py-12">
+        <section className="py-12" id="hot-items">
           <h2 className="text-4xl font-black text-center mb-8">Hot Items</h2>
           <div className="container mx-auto flex flex-col md:flex-row gap-8 justify-center items-stretch">
             {loading ? (

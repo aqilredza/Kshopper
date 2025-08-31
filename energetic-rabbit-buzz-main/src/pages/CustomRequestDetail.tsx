@@ -1,13 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, ArrowLeft, ExternalLink } from 'lucide-react';
+import { Loader2, ArrowLeft, ExternalLink, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { showError } from '@/utils/toast';
+import { showError, showSuccess } from '@/utils/toast';
 import { format } from 'date-fns';
 import { useAuth } from '@/context/AuthContext';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { subscribeToMessages, unsubscribeFromMessages } from '@/utils/chat';
 
 type CustomRequest = {
   id: string;
@@ -20,12 +30,27 @@ type CustomRequest = {
   notes: string | null;
 };
 
+type Message = {
+  id: string;
+  custom_request_id: string;
+  sender_id: string;
+  message: string;
+  created_at: string;
+  sender_profile: {
+    full_name: string;
+  } | null;
+};
+
 const CustomRequestDetail = () => {
   const { requestId } = useParams();
   const navigate = useNavigate();
   const { session } = useAuth();
   const [request, setRequest] = useState<CustomRequest | null>(null);
   const [loading, setLoading] = useState(true);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const messageChannel = useRef<any>(null);
 
   useEffect(() => {
     const fetchRequest = async () => {
@@ -57,6 +82,138 @@ const CustomRequestDetail = () => {
 
     fetchRequest();
   }, [requestId, navigate, session]);
+
+  useEffect(() => {
+    // Subscribe to real-time updates when chat is open
+    if (isChatOpen && requestId) {
+      // Unsubscribe from previous channel if exists
+      if (messageChannel.current) {
+        unsubscribeFromMessages(messageChannel.current);
+      }
+      
+      // Subscribe to new messages
+      messageChannel.current = subscribeToMessages(
+        requestId,
+        (newMessage) => {
+          setMessages(prev => [...prev, newMessage]);
+        }
+      );
+    }
+    
+    // Cleanup function
+    return () => {
+      if (messageChannel.current) {
+        unsubscribeFromMessages(messageChannel.current);
+      }
+    };
+  }, [isChatOpen, requestId]);
+
+  const fetchMessages = async () => {
+    if (!requestId) return;
+
+    // First fetch the messages
+    const { data: messages, error: messagesError } = await supabase
+      .from('custom_request_messages')
+      .select('id, custom_request_id, sender_id, message, created_at')
+      .eq('custom_request_id', requestId)
+      .order('created_at', { ascending: true });
+
+    if (messagesError) {
+      console.error('Error fetching messages:', messagesError);
+      return;
+    }
+
+    // If no messages, set empty array and return
+    if (!messages || messages.length === 0) {
+      setMessages([]);
+      return;
+    }
+
+    // Get unique sender IDs
+    const senderIds = [...new Set(messages.map((msg: any) => msg.sender_id))];
+
+    // Fetch profiles for all senders
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', senderIds);
+
+    if (profilesError) {
+      console.error('Error fetching profiles:', profilesError);
+      // Set messages without profile info
+      setMessages(messages.map((msg: any) => ({
+        ...msg,
+        sender_profile: null
+      })) as unknown as Message[]);
+      return;
+    }
+
+    // Create a map of profiles for quick lookup
+    const profileMap = profiles.reduce((acc: any, profile: any) => {
+      acc[profile.id] = profile;
+      return acc;
+    }, {});
+
+    // Combine messages with profile info
+    const messagesWithProfiles = messages.map((msg: any) => ({
+      ...msg,
+      sender_profile: profileMap[msg.sender_id] || null
+    }));
+
+    setMessages(messagesWithProfiles as unknown as Message[]);
+  };
+
+  const handleOpenChat = async () => {
+    setIsChatOpen(true);
+    await fetchMessages();
+  };
+
+  const handleSendMessage = async () => {
+    if (!session || !requestId || !newMessage.trim()) return;
+
+    console.log('Sending message:', {
+      custom_request_id: requestId,
+      sender_id: session.user.id,
+      message: newMessage.trim()
+    });
+
+    try {
+      const { data, error } = await supabase
+        .from('custom_request_messages')
+        .insert({
+          custom_request_id: requestId,
+          sender_id: session.user.id,
+          message: newMessage.trim()
+        })
+        .select('*, sender_profile:profiles(full_name)');
+
+      console.log('Message insert result:', { data, error });
+
+      if (error) {
+        // Handle specific error cases
+        if (error.message.includes('Could not find the table')) {
+          showError('Chat functionality is not set up yet. Please run the database migration script from the migrations folder.');
+        } else if (error.message.includes('permission denied')) {
+          showError('You do not have permission to send messages for this request.');
+        } else if (error.message.includes('violates foreign key constraint')) {
+          showError('Invalid request ID. Please refresh the page and try again.');
+        } else {
+          showError('Failed to send message: ' + error.message);
+        }
+        console.error('Failed to send message:', error);
+        return;
+      }
+
+      const newMsg = data[0] as unknown as Message;
+      // Don't add to state here since real-time subscription will handle it
+      // setMessages(prev => [...prev, newMsg]);
+      setNewMessage('');
+      showSuccess('Message sent successfully!');
+    } catch (error: any) {
+      console.error('Unexpected error sending message:', error);
+      showError('An unexpected error occurred while sending the message.');
+    }
+  };
 
   if (loading) {
     return (
@@ -121,6 +278,68 @@ const CustomRequestDetail = () => {
                 <span className="font-semibold">Category</span>
                 <span>{request.category || 'N/A'}</span>
               </div>
+              <Dialog open={isChatOpen} onOpenChange={setIsChatOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={handleOpenChat} className="w-full">
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    Chat with Admin
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+                  <DialogHeader>
+                    <DialogTitle>Chat about Request: {request.product_description.substring(0, 30)}...</DialogTitle>
+                  </DialogHeader>
+                  <div className="flex-1 overflow-hidden">
+                    <ScrollArea className="h-[400px] pr-4">
+                      <div className="space-y-4">
+                        {messages.map((message) => (
+                          <div 
+                            key={message.id} 
+                            className={`p-3 rounded-lg ${
+                              message.sender_id === session?.user.id 
+                                ? 'bg-primary text-primary-foreground ml-10' 
+                                : 'bg-muted mr-10'
+                            }`}
+                          >
+                            <div className="font-medium text-sm">
+                              {message.sender_profile?.full_name || 'Admin'}
+                            </div>
+                            <div className="mt-1">{message.message}</div>
+                            <div className="text-xs opacity-70 mt-1">
+                              {format(new Date(message.created_at), 'PPp')}
+                            </div>
+                          </div>
+                        ))}
+                        {messages.length === 0 && (
+                          <p className="text-center text-muted-foreground py-8">
+                            No messages yet. Start the conversation!
+                          </p>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                  <div className="flex gap-2 pt-4">
+                    <Textarea
+                      placeholder="Type your message..."
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }}
+                      className="flex-1"
+                    />
+                    <Button 
+                      onClick={handleSendMessage}
+                      disabled={!newMessage.trim()}
+                    >
+                      Send
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </CardContent>
           </Card>
           {request.image_url && (

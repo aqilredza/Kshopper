@@ -30,34 +30,34 @@ const CustomRequest: React.FC = () => {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
-      setSelectedFile(event.target.files[0]);
+      const file = event.target.files[0];
+      setSelectedFile(file);
       setImageUrl(null);
+      
+      // Automatically upload the selected file
+      handleAutomaticUpload(file);
     } else {
       setSelectedFile(null);
     }
   };
 
-  const handleUpload = async () => {
+  const handleAutomaticUpload = async (file: File) => {
     if (!session) {
       toast.error("You need to be logged in to upload an image.");
       navigate("/login");
-      return;
-    }
-    if (!selectedFile) {
-      toast.error("Please select a file to upload.");
       return;
     }
 
     setUploading(true);
     setUploadProgress(0);
 
-    const fileExtension = selectedFile.name.split(".").pop();
+    const fileExtension = file.name.split(".").pop();
     const filePath = `${session.user.id}/${Date.now()}.${fileExtension}`;
 
-    console.log("Uploading file to:", filePath);
+    console.log("Automatically uploading file to:", filePath);
     const { data, error } = await supabase.storage
       .from("custom_request_images")
-      .upload(filePath, selectedFile, {
+      .upload(filePath, file, {
         cacheControl: "3600",
         upsert: false,
         onUploadProgress: (event) => {
@@ -67,11 +67,12 @@ const CustomRequest: React.FC = () => {
         },
       } as any);
 
-    console.log("Upload result:", { data, error });
+    console.log("Automatic upload result:", { data, error });
     if (error) {
       toast.error("Image upload failed: " + error.message);
       setUploading(false);
       setUploadProgress(0);
+      setSelectedFile(null);
       return;
     }
 
@@ -120,13 +121,8 @@ const CustomRequest: React.FC = () => {
     if (error) {
       toast.error("Failed to submit request: " + error.message);
     } else {
-      toast.success("Custom request submitted successfully!");
-      setProductDescription("");
-      setCategory("");
-      setProductLink("");
-      setNotes("");
-      setImageUrl(null);
-      setSelectedFile(null);
+      // Redirect to confirmation page
+      navigate("/custom-request-confirmation");
     }
     setIsSubmitting(false);
   };
@@ -201,13 +197,12 @@ const CustomRequest: React.FC = () => {
               <UploadCloud className="h-5 w-5" />
               {selectedFile ? selectedFile.name : "Choose File"}
             </Button>
-            {selectedFile && (
+            {uploading && (
               <Button
                 type="button"
-                onClick={handleUpload}
-                disabled={uploading || !!imageUrl}
+                disabled
               >
-                {uploading ? "Uploading..." : "Upload"}
+                Uploading...
               </Button>
             )}
             {imageUrl && (

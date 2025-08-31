@@ -131,7 +131,7 @@ const Cart = () => {
           ) : cartItems.length === 0 ? (
             <div className="text-center py-16 border rounded-md">
               <p className="text-lg text-muted-foreground">Your cart is currently empty.</p>
-              <Button onClick={() => navigate('/')} className="mt-4">Continue Shopping</Button>
+              <Button onClick={() => navigate('/')}>Continue Shopping</Button>
             </div>
           ) : (
             <div className="space-y-4">

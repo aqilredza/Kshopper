@@ -87,6 +87,7 @@ const OrderConfirmation = () => {
           <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
           <CardTitle className="text-3xl font-black uppercase">Thank You For Your Order!</CardTitle>
           <p className="text-muted-foreground">Your order has been placed successfully.</p>
+          <p className="text-green-700 font-medium mt-2">The admin team has received your request and will review it shortly. We will provide you with an update via WhatsApp on your orders.</p>
           <p className="text-sm text-muted-foreground">Order ID: {order.id}</p>
         </CardHeader>
         <CardContent>

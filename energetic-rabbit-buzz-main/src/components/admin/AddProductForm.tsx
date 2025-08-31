@@ -30,12 +30,6 @@ const formSchema = z.object({
   }).optional(),
 });
 
-type RestaurantPlatform = {
-  id: string;
-  restaurants: { name: string } | null;
-  platforms: { name: string } | null;
-};
-
 const AddProductForm = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -48,9 +42,25 @@ const AddProductForm = () => {
       name: '',
       description: '',
       price: 0,
-      // Removed image_url and restaurant_platform_id as they are not direct form inputs
     },
   });
+
+  // Function to get the KShopper Platform id
+  const getKShopperPlatformId = async () => {
+    const { data: platforms, error } = await supabase
+      .from('platforms')
+      .select('id, name')
+      .eq('name', 'KShopper Platform')
+      .limit(1);
+    if (error) {
+      console.error('Error fetching platforms:', error);
+      return null;
+    }
+    if (platforms && platforms.length > 0) {
+      return platforms[0].id;
+    }
+    return null;
+  };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!category) {
@@ -59,29 +69,62 @@ const AddProductForm = () => {
     }
     setIsSubmitting(true);
     let imageUrl = '';
+    
+    // Upload image to Supabase storage
     if (values.image_file && values.image_file instanceof File) {
-      const { data, error: uploadError } = await supabase.storage.from('product-images').upload(`products/${Date.now()}_${values.image_file.name}`, values.image_file);
+      const fileExt = values.image_file.name.split('.').pop();
+      const fileName = `products/${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(fileName, values.image_file);
+      
       if (uploadError) {
         showError('Failed to upload image.');
         setIsSubmitting(false);
         return;
       }
-      // Corrected access to publicUrl
-      const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(data.path);
-      imageUrl = urlData?.publicUrl || '';
+      
+      // Get public URL for the uploaded image
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(fileName);
+      
+      imageUrl = publicUrl;
     }
-    const { error } = await supabase.from('menu_items').insert([
-      {
-        name: values.name,
-        description: values.description,
-        price: values.price,
-        image_url: imageUrl,
-        category: category,
-      },
-    ]);
+    
+    // Get the KShopper Platform id
+    const platformId = await getKShopperPlatformId();
+    if (!platformId) {
+      showError('Database setup required: Run the complete_setup.sql script in your Supabase dashboard. See README.md for instructions.');
+      setIsSubmitting(false);
+      return;
+    }
+    // Insert product into menu_items table with platform_id
+    const { data, error } = await supabase
+      .from('menu_items')
+      .insert([
+        {
+          name: values.name,
+          description: values.description || '',
+          price: values.price,
+          image_url: imageUrl,
+          category: category,
+          platform_id: platformId
+        },
+      ])
+      .select();
+    
     if (error) {
-      showError(error.message || 'Failed to add product.');
+      console.error('Database error details:', error);
+      
+      // Provide more specific error messages
+      if (error.message.includes('row-level security')) {
+        showError('Permission denied: You must be logged in as admin (mredza31@gmail.com) to add products. If you are the admin, the database policies may need to be updated.');
+      } else {
+        showError(`Database error: ${error.message}`);
+      }
     } else {
+      console.log('Product added successfully to menu_items:', data);
       showSuccess('Product added successfully!');
       navigate(`/category/${category}`);
     }
@@ -91,7 +134,6 @@ const AddProductForm = () => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-  {/* Restaurant selection removed as requested */}
         <FormField
           control={form.control}
           name="name"
@@ -148,6 +190,9 @@ const AddProductForm = () => {
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Add Product
         </Button>
+        <div className="text-sm text-muted-foreground">
+          <p><strong>Note:</strong> Database setup required. See README.md for setup instructions.</p>
+        </div>
       </form>
     </Form>
   );
