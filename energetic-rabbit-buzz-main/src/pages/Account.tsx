@@ -3,7 +3,7 @@
 
 // ...existing code...
 import { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
 import { Loader2, MessageCircle } from 'lucide-react';
@@ -34,11 +34,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { subscribeToMessages, unsubscribeFromMessages } from '@/utils/chat';
 
+type OrderItem = {
+  id: string;
+  quantity: number;
+  menu_items: {
+    name: string;
+    image_url: string | null;
+  };
+};
 type Order = {
   id: string;
   created_at: string;
   total_price: number;
   status: string;
+  items?: OrderItem[];
 };
 
 type CustomRequest = {
@@ -72,6 +81,13 @@ type Message = {
 
 const Account = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  // Read tab param from query string
+  const params = new URLSearchParams(location.search);
+  const tabParam = params.get('tab');
+  const validTabs = ['orders', 'requests'];
+  const initialTab = validTabs.includes(tabParam || '') ? tabParam : 'orders';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -93,6 +109,10 @@ const Account = () => {
 
   // Initial data loading useEffect (moved inside component)
   useEffect(() => {
+    // Update tab if query param changes
+    if (tabParam && validTabs.includes(tabParam) && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
     async function getInitialData() {
       try {
         console.log('[DEBUG] Fetching Supabase session...');
@@ -142,7 +162,7 @@ const Account = () => {
         console.log('[DEBUG] Fetching orders for user:', session.user.id);
         const { data: ordersData, error: ordersError } = await supabase
           .from('orders')
-          .select('id, created_at, total_price, status')
+          .select('id, created_at, total_price, status, order_items(id, quantity, menu_items(name, image_url))')
           .eq('user_id', session.user.id)
           .neq('status', 'deleted')
           .order('created_at', { ascending: false });
@@ -151,7 +171,12 @@ const Account = () => {
           setLoading(false);
           return;
         }
-        if (ordersData) setOrders(ordersData);
+        if (ordersData) {
+          setOrders(ordersData.map((order: any) => ({
+            ...order,
+            items: order.order_items || [],
+          })));
+        }
         console.log('[DEBUG] Fetching custom requests for user:', session.user.id);
         const { data: requestsData, error: requestsError } = await supabase
           .from('custom_requests')
@@ -549,7 +574,7 @@ const Account = () => {
           </Card>
         </div>
         <div className="lg:col-span-2">
-          <Tabs defaultValue="orders">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="orders">Order History</TabsTrigger>
               <TabsTrigger value="requests">Custom Requests</TabsTrigger>
@@ -569,7 +594,8 @@ const Account = () => {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Order ID</TableHead>
-                          <TableHead>Date</TableHead>
+                          <TableHead>Date/Time</TableHead>
+                          <TableHead>Items</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead className="text-right">Total</TableHead>
                         </TableRow>
@@ -578,7 +604,20 @@ const Account = () => {
                         {orders.map((order) => (
                           <TableRow key={order.id} className="hover:bg-muted/50">
                             <TableCell className="font-medium truncate max-w-[120px] sm:max-w-xs cursor-pointer" onClick={() => navigate(`/order/${order.id}`)}>{order.id}</TableCell>
-                            <TableCell>{format(new Date(order.created_at), 'PPP')}</TableCell>
+                            <TableCell>{format(new Date(order.created_at), 'PPP p')}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-2">
+                                {order.items && order.items.length > 0 ? order.items.map(item => (
+                                  <div key={item.id} className="flex items-center gap-2">
+                                    {item.menu_items?.image_url && (
+                                      <img src={item.menu_items.image_url} alt={item.menu_items.name} className="w-10 h-10 object-cover rounded" />
+                                    )}
+                                    <span className="truncate max-w-[120px]">{item.menu_items?.name || 'No name'}</span>
+                                    <span className="text-xs text-muted-foreground ml-2">x{item.quantity}</span>
+                                  </div>
+                                )) : <span className="text-xs text-muted-foreground">No items</span>}
+                              </div>
+                            </TableCell>
                             <TableCell>
                               <Badge variant={order.status === 'pending' ? 'secondary' : 'default'}>
                                 {order.status}

@@ -513,7 +513,6 @@ const CustomRequestsList = () => {
                             <SelectItem value="rejected">Rejected</SelectItem>
                           </SelectContent>
                         </Select>
-                        <span className="text-xs text-muted-foreground">DB: {request.status}</span>
                       </div>
                     </TableCell>
                     <TableCell className="flex gap-2">
