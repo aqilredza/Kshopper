@@ -16,19 +16,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user || null);
-      setIsLoading(false);
+      console.log('Auth state changed:', _event, session?.user?.email);
+      if (mounted) {
+        setSession(session);
+        setUser(session?.user || null);
+        setIsLoading(false);
+      }
     });
 
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user || null);
-      setIsLoading(false);
+      console.log('Initial session check:', session?.user?.email);
+      if (mounted) {
+        setSession(session);
+        setUser(session?.user || null);
+        setIsLoading(false);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   return (

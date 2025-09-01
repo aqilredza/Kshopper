@@ -320,11 +320,11 @@ const CustomRequestsList = () => {
       }
 
       const newMsg = data[0] as unknown as Message;
-      // Don't add to state here since real-time subscription will handle it
-      // setMessages(prev => ({
-      //   ...prev,
-      //   [requestId]: [...(prev[requestId] || []), newMsg]
-      // }));
+      // Add message to state immediately for better UX
+      setMessages(prev => ({
+        ...prev,
+        [requestId]: [...(prev[requestId] || []), newMsg]
+      }));
 
       setNewMessage(prev => ({
         ...prev,
@@ -555,7 +555,7 @@ const CustomRequestsList = () => {
                           </DialogHeader>
                           <div className="flex-1 overflow-hidden">
                             <ScrollArea className="h-[400px] pr-4">
-                              <div className="space-y-4">
+                              <div className="space-y-4 overflow-y-auto h-full">
                                 {(messages[request.id] || []).map((message) => (
                                   <div 
                                     key={message.id} 

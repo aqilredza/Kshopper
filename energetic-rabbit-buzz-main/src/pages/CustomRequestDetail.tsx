@@ -255,8 +255,8 @@ const CustomRequestDetail = () => {
       }
 
       const newMsg = data[0] as unknown as Message;
-      // Don't add to state here since real-time subscription will handle it
-      // setMessages(prev => [...prev, newMsg]);
+      // Add message to state immediately for better UX
+      setMessages(prev => [...prev, newMsg]);
       setNewMessage('');
       showSuccess('Message sent successfully!');
     } catch (error: any) {
@@ -356,7 +356,7 @@ const CustomRequestDetail = () => {
                   </DialogHeader>
                   <div className="flex-1 overflow-hidden">
                     <ScrollArea className="h-[400px] pr-4">
-                      <div className="space-y-4">
+                      <div className="space-y-4 overflow-y-auto h-full">
                         {messages.map((message) => (
                           <div 
                             key={message.id} 

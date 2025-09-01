@@ -103,6 +103,14 @@ const Account = () => {
   const [newMessage, setNewMessage] = useState<{[key: string]: string}>({});
   const [openChatRequestId, setOpenChatRequestId] = useState<string | null>(null);
   const messageChannels = useRef<{[key: string]: any}>({});
+  const messagesEndRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
+
+  // Scroll to bottom when messages change for the open chat
+  useEffect(() => {
+    if (openChatRequestId && messagesEndRefs.current[openChatRequestId]) {
+      messagesEndRefs.current[openChatRequestId]?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, openChatRequestId]);
 
   const [editMode, setEditMode] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -328,11 +336,11 @@ const Account = () => {
       }
 
       const newMsg = data[0] as unknown as Message;
-      // Don't add to state here since real-time subscription will handle it
-      // setMessages(prev => ({
-      //   ...prev,
-      //   [requestId]: [...(prev[requestId] || []), newMsg]
-      // }));
+      // Add message to state immediately for better UX
+      setMessages(prev => ({
+        ...prev,
+        [requestId]: [...(prev[requestId] || []), newMsg]
+      }));
 
       setNewMessage(prev => ({
         ...prev,
@@ -779,6 +787,7 @@ const Account = () => {
                                               No messages yet. Start the conversation!
                                             </p>
                                           )}
+                                          <div ref={(el) => { messagesEndRefs.current[request.id] = el; }} />
                                         </div>
                                       </ScrollArea>
                                     </div>

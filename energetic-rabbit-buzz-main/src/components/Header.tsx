@@ -195,8 +195,32 @@ const Header = () => {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/');
+    try {
+      // Force sign out with a different approach
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
+      
+      // Clear any local storage data
+      localStorage.clear();
+      
+      // Navigate to home page first
+      navigate('/');
+      
+      // Refresh the page to ensure clean state
+      window.location.reload();
+    } catch (error) {
+      console.error('Error during logout:', error);
+      
+      // Even if Supabase logout fails, clear local data and redirect
+      try {
+        localStorage.clear();
+      } catch (storageError) {
+        console.error('Error clearing local storage:', storageError);
+      }
+      
+      // Navigate to home and refresh
+      navigate('/');
+      window.location.reload();
+    }
   };
 
   const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
