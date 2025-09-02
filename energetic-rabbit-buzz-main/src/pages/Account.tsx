@@ -664,6 +664,17 @@ const Account = () => {
                                   setOrders(orders.filter(o => o.id !== order.id));
                                 }
                               }}>Remove</Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="ml-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open('https://wa.me/60176125413', '_blank');
+                                }}
+                              >
+                                Contact Admin via WhatsApp
+                              </Button>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -835,6 +846,17 @@ const Account = () => {
                                   }}
                                 >
                                   Remove
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  className="mt-2"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open('https://wa.me/60176125413', '_blank');
+                                  }}
+                                >
+                                  Contact Admin via WhatsApp
                                 </Button>
                               </div>
                             </TableCell>
