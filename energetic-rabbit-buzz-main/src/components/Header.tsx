@@ -235,9 +235,12 @@ const Header = () => {
   };
 
   const NavLinks = ({ isMobile = false }: { isMobile?: boolean }) => {
-    const commonClasses = "hover:text-primary transition-colors";
+    const commonClasses = "transition-all duration-300 relative transform";
     const mobileClasses = "text-xl";
     const desktopClasses = "text-lg font-bold";
+    
+    // Text color with hover effect and lift
+    const textClasses = "text-foreground hover:text-red-500";
 
     const linkProps = {
       onClick: isMobile ? () => setIsMobileMenuOpen(false) : undefined,
@@ -245,10 +248,46 @@ const Header = () => {
 
     return (
       <>
-        <Link to="/category/k-beauty" className={`${commonClasses} ${isMobile ? mobileClasses : desktopClasses}`} {...linkProps}>K-Beauty</Link>
-        <Link to="/category/k-fashion" className={`${commonClasses} ${isMobile ? mobileClasses : desktopClasses}`} {...linkProps}>K-Fashion</Link>
-        <Link to="/category/k-food" className={`${commonClasses} ${isMobile ? mobileClasses : desktopClasses}`} {...linkProps}>K-Food</Link>
-        <Link to="/custom-request" className={`${commonClasses} ${isMobile ? mobileClasses : desktopClasses}`} {...linkProps}>Request Items</Link>
+        <Link 
+          to="/category/k-beauty" 
+          className={`${commonClasses} ${isMobile ? mobileClasses : desktopClasses} ${textClasses}`} 
+          {...linkProps}
+          style={{
+            textShadow: "0 10px 15px rgba(239, 68, 68, 0.3), 0 4px 6px rgba(236, 72, 153, 0.3)"
+          }}
+        >
+          K-Beauty
+        </Link>
+        <Link 
+          to="/category/k-fashion" 
+          className={`${commonClasses} ${isMobile ? mobileClasses : desktopClasses} ${textClasses}`} 
+          {...linkProps}
+          style={{
+            textShadow: "0 10px 15px rgba(239, 68, 68, 0.3), 0 4px 6px rgba(236, 72, 153, 0.3)"
+          }}
+        >
+          K-Fashion
+        </Link>
+        <Link 
+          to="/category/k-food" 
+          className={`${commonClasses} ${isMobile ? mobileClasses : desktopClasses} ${textClasses}`} 
+          {...linkProps}
+          style={{
+            textShadow: "0 10px 15px rgba(239, 68, 68, 0.3), 0 4px 6px rgba(236, 72, 153, 0.3)"
+          }}
+        >
+          K-Food
+        </Link>
+        <Link 
+          to="/custom-request" 
+          className={`${commonClasses} ${isMobile ? mobileClasses : desktopClasses} ${textClasses}`} 
+          {...linkProps}
+          style={{
+            textShadow: "0 10px 15px rgba(239, 68, 68, 0.3), 0 4px 6px rgba(236, 72, 153, 0.3)"
+          }}
+        >
+          Request Items
+        </Link>
       </>
     );
   };
@@ -270,7 +309,9 @@ const Header = () => {
                 <SheetContent side="left">
                   <SheetHeader>
                     <SheetTitle className="text-2xl font-black uppercase">
-                      <Link to="/" onClick={() => setIsMobileMenuOpen(false)}>KShopper</Link>
+                      <Link to="/" onClick={() => setIsMobileMenuOpen(false)}>
+                        <span className="bg-gradient-to-r from-red-500 via-pink-500 to-blue-600 bg-clip-text text-transparent">KShopper</span>
+                      </Link>
                     </SheetTitle>
                   </SheetHeader>
                   <nav className="flex flex-col space-y-6 mt-8">
@@ -280,7 +321,9 @@ const Header = () => {
               </Sheet>
             </div>
             <div className="text-3xl font-black uppercase">
-              <Link to="/">KShopper</Link>
+              <Link to="/">
+                <span className="bg-gradient-to-r from-red-500 via-pink-500 to-blue-600 bg-clip-text text-transparent">KShopper</span>
+              </Link>
             </div>
             <nav className="hidden md:flex items-center space-x-6 text-lg font-bold ml-10">
               <NavLinks />

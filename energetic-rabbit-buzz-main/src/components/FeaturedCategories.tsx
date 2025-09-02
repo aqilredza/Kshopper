@@ -30,35 +30,34 @@ const FeaturedCategories = ({ hideTitle = false }: { hideTitle?: boolean }) => {
   }, []);
 
   return (
-    <section
-      className="py-12"
-      style={{
-        background: "linear-gradient(120deg, #fff 0%, #ffe5e5 40%, #e5f0ff 100%)"
-      }}
-    >
+    <section className="py-12">
       <div className="container mx-auto px-4">
-        {!hideTitle && <h2 className="text-3xl font-bold text-center mb-8">Featured Categories</h2>}
+        {!hideTitle && (
+          <h2 className="text-3xl font-bold text-center mb-8">
+            <span className="bg-gradient-to-r from-red-500 via-pink-500 to-blue-600 bg-clip-text text-transparent">Featured Categories</span>
+          </h2>
+        )}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-6">
           {categories.map((category) => (
-            <Link to={`/category/${category.name.toLowerCase()}`} key={category.id}>
-              <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300 bg-white rounded-2xl shadow flex flex-col h-full">
+            <Link to={`/category/${category.name.toLowerCase()}`} key={category.id} className="transform transition-all duration-300 hover:-translate-y-2">
+              <Card className="overflow-hidden bg-white rounded-3xl shadow-xl flex flex-col h-full hover:shadow-2xl">
                 <CardContent className="p-0 flex-1 flex flex-col">
                   <img src={category.image_url} alt={category.name} className="w-full h-64 object-cover" />
                   <div className="p-6 flex-1 flex flex-col justify-center">
-                    <p className="font-semibold text-center">{category.name}</p>
+                    <p className="font-bold text-center text-gray-800">{category.name}</p>
                   </div>
                 </CardContent>
               </Card>
             </Link>
           ))}
-          <Link to="/custom-request">
-            <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300 h-full bg-white rounded-2xl shadow flex flex-col">
+          <Link to="/custom-request" className="transform transition-all duration-300 hover:-translate-y-2">
+            <Card className="overflow-hidden h-full bg-white rounded-3xl shadow-xl flex flex-col hover:shadow-2xl">
               <CardContent className="p-0 flex-1 flex flex-col">
-                <div className="w-full h-64 bg-gray-200 flex items-center justify-center">
-                  <PlusCircle className="w-16 h-16 text-gray-500" />
+                <div className="w-full h-64 bg-gradient-to-br from-red-50 to-pink-50 flex items-center justify-center">
+                  <PlusCircle className="w-16 h-16 text-red-400" />
                 </div>
                 <div className="p-6 flex-1 flex flex-col justify-center">
-                  <p className="font-semibold text-center">Request an Item</p>
+                  <p className="font-bold text-center text-gray-800">Request an Item</p>
                 </div>
               </CardContent>
             </Card>

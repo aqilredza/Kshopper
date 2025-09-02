@@ -1,31 +1,50 @@
-import { Github, Twitter, Instagram } from "lucide-react";
+import { Mail, Phone, MapPin } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="bg-foreground text-background">
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-8">
-        <div className="flex flex-col md:flex-row md:items-center gap-8">
-          <div className="flex flex-col items-start">
-            <h3 className="text-2xl font-black uppercase mb-2">KSHOPPER</h3>
-            <p className="text-sm text-muted-foreground max-w-xs mb-2">
+    <footer className="bg-gradient-to-r from-gray-800 via-gray-900 to-black text-white">
+      <div className="container mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Brand Section */}
+          <div className="space-y-1">
+            <h2 className="text-xl font-black uppercase tracking-tight">KSHOPPER</h2>
+            <p className="text-gray-300 text-xs">
               Your trusted bridge to authentic Korean products. Connecting Malaysian customers with verified personal shoppers in Korea.
             </p>
           </div>
-          <ul className="flex flex-col md:flex-row gap-4 text-base font-medium">
-            <li><a href="#" className="hover:underline">About Us</a></li>
-            <li><a href="#" className="hover:underline">FAQ</a></li>
-            <li><a href="#" className="hover:underline">Shipping &amp; Returns</a></li>
-            <li><a href="#" className="hover:underline">Contact</a></li>
-          </ul>
+
+          {/* Quick Links */}
+          <div className="space-y-1">
+            <h3 className="text-base font-bold uppercase tracking-wide">Quick Links</h3>
+            <ul className="space-y-0.5">
+              <li>
+                <a href="#" className="text-gray-300 hover:text-red-400 hover:underline transition-all duration-300 text-xs">Home</a>
+              </li>
+              <li>
+                <a href="#" className="text-gray-300 hover:text-red-400 hover:underline transition-all duration-300 text-xs">About Us</a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Contact Info */}
+          <div className="space-y-1">
+            <h3 className="text-base font-bold uppercase tracking-wide">Contact Us</h3>
+            <ul className="space-y-1">
+              <li className="flex items-start space-x-1.5">
+                <MapPin size={14} className="mt-0.5 flex-shrink-0 text-red-400" />
+                <span className="text-gray-300 text-xs">123 Shopping Street, Kuala Lumpur, Malaysia</span>
+              </li>
+              <li className="flex items-center space-x-1.5">
+                <Phone size={14} className="text-red-400" />
+                <span className="text-gray-300 text-xs">+60 123-456-789</span>
+              </li>
+              <li className="flex items-center space-x-1.5">
+                <Mail size={14} className="text-red-400" />
+                <span className="text-gray-300 text-xs">support@kshopper.com</span>
+              </li>
+            </ul>
+          </div>
         </div>
-        <div className="flex gap-4 text-2xl">
-          <a href="#" aria-label="Twitter"><Twitter /></a>
-          <a href="#" aria-label="Instagram"><Instagram /></a>
-          <a href="#" aria-label="Github"><Github /></a>
-        </div>
-      </div>
-      <div className="mt-8 border-t border-muted pt-8 text-center text-sm">
-        <p>&copy; {new Date().getFullYear()} KShopper. All Rights Reserved.</p>
       </div>
     </footer>
   );

@@ -38,19 +38,14 @@ const Index = () => {
   }, []);
 
   return (
-    <div
-      className="text-foreground min-h-screen flex flex-col"
-      style={{
-        background: "linear-gradient(120deg, #fff 0%, #ffe5e5 40%, #e5f0ff 100%)"
-      }}
-    >
-      <main className="flex-1">
-        <section
-          className="pt-20 pb-12 relative overflow-hidden"
-          style={{
-            background: "linear-gradient(120deg, #fff 0%, #ffe5e5 40%, #e5f0ff 100%)"
-          }}
-        >
+    <div className="text-foreground min-h-screen flex flex-col">
+      <main 
+        className="flex-1"
+        style={{
+          background: "linear-gradient(120deg, #ffffff 0%, #ffe5e5 30%, #e5f0ff 70%, #ffffff 100%)"
+        }}
+      >
+        <section className="pt-20 pb-12 relative overflow-hidden">
           <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between relative z-10">
             <div className="flex-1 flex flex-col items-start justify-center">
               <h1 className="text-5xl md:text-6xl font-black mb-6 leading-tight">
@@ -81,13 +76,15 @@ const Index = () => {
         </section>
 
         <section className="py-12" id="hot-items">
-          <h2 className="text-4xl font-black text-center mb-8">Hot Items</h2>
-          <div className="container mx-auto flex flex-col md:flex-row gap-8 justify-center items-stretch">
+          <h2 className="text-4xl font-black text-center mb-8">
+            <span className="bg-gradient-to-r from-red-500 via-pink-500 to-blue-600 bg-clip-text text-transparent">Hot Items</span>
+          </h2>
+          <div className="container mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {loading ? (
               Array.from({ length: 3 }).map((_, idx) => (
-                <div key={idx} className="bg-white rounded-2xl shadow flex-1 flex flex-col overflow-hidden max-w-xs mx-auto">
+                <div key={idx} className="bg-white rounded-3xl shadow-xl flex flex-col overflow-hidden transform transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl h-full">
                   <Skeleton className="w-full h-64" />
-                  <div className="p-6 flex-1 flex flex-col">
+                  <div className="p-6 flex flex-col flex-grow">
                     <Skeleton className="h-6 w-3/4 mb-4" />
                     <Skeleton className="h-12 w-full mt-auto" />
                   </div>
@@ -95,17 +92,22 @@ const Index = () => {
               ))
             ) : (
               hotItems.map((item) => (
-                <div key={item.id} className="bg-white rounded-2xl shadow flex-1 flex flex-col overflow-hidden max-w-xs mx-auto">
-                  <img src={item.image_url} alt={item.title} className="w-full h-64 object-cover" />
-                  <div className="p-6 flex-1 flex flex-col">
-                    <div className="text-xl font-semibold mb-4">{item.title}</div>
-                    <div className="mt-auto flex flex-col gap-2">
+                <div key={item.id} className="bg-white rounded-3xl shadow-xl flex flex-col overflow-hidden transform transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl h-full">
+                  <div className="relative">
+                    <img src={item.image_url} alt={item.title} className="w-full h-64 object-cover" />
+                    <div className="absolute top-4 right-4 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                      HOT
+                    </div>
+                  </div>
+                  <div className="p-6 flex flex-col flex-grow">
+                    <div className="text-xl font-bold mb-3 text-gray-800">{item.title}</div>
+                    <div className="mt-auto flex flex-col gap-3">
                       {item.menu_item_id && (
-                        <Button asChild className="bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">
+                        <Button asChild className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl hover:from-red-600 hover:to-pink-600 transition-all duration-300 shadow-md">
                           <Link to={`/product/${item.menu_item_id}`}>View Product</Link>
                         </Button>
                       )}
-                      <Button asChild variant="outline" className="font-bold py-3 rounded-lg transition">
+                      <Button asChild variant="outline" className="font-bold py-3 rounded-xl transition-all duration-300 border-2 hover:border-red-300 hover:bg-red-50">
                         <Link to="/custom-request">Request Items</Link>
                       </Button>
                     </div>
@@ -117,12 +119,14 @@ const Index = () => {
         </section>
 
         <section className="py-12">
-          <h2 className="text-4xl font-black text-center mb-0">Shop by Category</h2>
+          <h2 className="text-4xl font-black text-center mb-0">
+            <span className="bg-gradient-to-r from-red-500 via-pink-500 to-blue-600 bg-clip-text text-transparent">Shop by Category</span>
+          </h2>
           <FeaturedCategories hideTitle />
         </section>
       </main>
     </div>
   );
-}
+};
 
-export default Index;
+export default Index;;

@@ -7,6 +7,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
 import { Loader2, MessageCircle } from 'lucide-react';
+import WhatsappIcon from '@/components/WhatsappIcon';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Table,
@@ -611,7 +612,11 @@ const Account = () => {
                       <TableBody>
                         {orders.map((order) => (
                           <TableRow key={order.id} className="hover:bg-muted/50">
-                            <TableCell className="font-medium truncate max-w-[120px] sm:max-w-xs cursor-pointer" onClick={() => navigate(`/order/${order.id}`)}>{order.id}</TableCell>
+                            <TableCell className="font-medium truncate max-w-[120px] sm:max-w-xs cursor-pointer" onClick={() => navigate(`/order/${order.id}`)}>
+                              {order.id.length > 12
+                                ? `${order.id.slice(0, 6)}...${order.id.slice(-4)}`
+                                : order.id}
+                            </TableCell>
                             <TableCell>{format(new Date(order.created_at), 'PPP p')}</TableCell>
                             <TableCell>
                               <div className="flex flex-col gap-2">
@@ -649,32 +654,43 @@ const Account = () => {
                                   }
                                 }}>Cancel</Button>
                               )}
-                              <Button size="sm" variant="destructive" className="ml-2" onClick={async (e) => {
-                                e.stopPropagation();
-                                if (!window.confirm('Are you sure you want to remove this order?')) return;
-                                const { error } = await supabase
-                                  .from('orders')
-                                  .update({ status: 'deleted' })
-                                  .eq('id', order.id)
-                                  .eq('user_id', user?.id);
-                                if (error) {
-                                  showError('Failed to remove order.');
-                                } else {
-                                  showSuccess('Order removed.');
-                                  setOrders(orders.filter(o => o.id !== order.id));
-                                }
-                              }}>Remove</Button>
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                className="ml-2"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  window.open('https://wa.me/60176125413', '_blank');
-                                }}
-                              >
-                                Contact Admin via WhatsApp
-                              </Button>
+                              {/* Remove button moved to bottom, duplicate removed */}
+                              <div className="flex flex-col items-center gap-2 mt-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex items-center gap-2 border-green-500 text-green-700 hover:bg-green-50"
+                                  style={{ minWidth: 220 }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open('https://wa.me/60176125413', '_blank');
+                                  }}
+                                >
+                                  <WhatsappIcon style={{ fontSize: 18 }} />
+                                  Contact Admin via WhatsApp
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  className="w-full"
+                                  onClick={async () => {
+                                    if (!window.confirm('Are you sure you want to remove this order?')) return;
+                                    const { error } = await supabase
+                                      .from('orders')
+                                      .update({ status: 'deleted' })
+                                      .eq('id', order.id)
+                                      .eq('user_id', user?.id);
+                                    if (error) {
+                                      showError('Failed to remove order.');
+                                    } else {
+                                      showSuccess('Order removed.');
+                                      setOrders(orders.filter(o => o.id !== order.id));
+                                    }
+                                  }}
+                                >
+                                  Remove
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -755,6 +771,7 @@ const Account = () => {
                             </TableCell>
                             <TableCell>
                               <div className="flex flex-col gap-2">
+                                {/* Chat button */}
                                 <Dialog open={openChatRequestId === request.id} onOpenChange={(open) => {
                                   if (!open) setOpenChatRequestId(null);
                                 }}>
@@ -827,6 +844,23 @@ const Account = () => {
                                     </div>
                                   </DialogContent>
                                 </Dialog>
+                                {/* WhatsApp button */}
+                                <div className="flex justify-center">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex items-center gap-2 border-green-500 text-green-700 hover:bg-green-50"
+                                    style={{ minWidth: 220 }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      window.open('https://wa.me/60176125413', '_blank');
+                                    }}
+                                  >
+                                    <WhatsappIcon style={{ fontSize: 18 }} />
+                                    Contact Admin via WhatsApp
+                                  </Button>
+                                </div>
+                                {/* Remove button */}
                                 <Button
                                   variant="destructive"
                                   size="sm"
@@ -846,17 +880,6 @@ const Account = () => {
                                   }}
                                 >
                                   Remove
-                                </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  className="mt-2"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    window.open('https://wa.me/60176125413', '_blank');
-                                  }}
-                                >
-                                  Contact Admin via WhatsApp
                                 </Button>
                               </div>
                             </TableCell>
