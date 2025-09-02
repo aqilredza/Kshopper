@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
@@ -71,6 +71,19 @@ const CustomRequestsList = () => {
   const [openChatRequestId, setOpenChatRequestId] = useState<string | null>(null);
   const messageChannels = useRef<{[key: string]: any}>({});
   const requestsChannel = useRef<any>(null);
+  const scrollAreaRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
+  
+  // Function to scroll to bottom of chat for a specific request
+  const scrollToBottom = useCallback((requestId: string) => {
+    // Use a longer timeout to ensure DOM is fully updated
+    setTimeout(() => {
+      const scrollArea = scrollAreaRefs.current[requestId];
+      if (scrollArea) {
+        // Scroll the actual scrollable element (the viewport)
+        scrollArea.scrollTop = scrollArea.scrollHeight;
+      }
+    }, 100);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -145,34 +158,94 @@ const CustomRequestsList = () => {
     };
   }, [navigate]);
 
+  // Subscribe to real-time updates when a chat is opened
   useEffect(() => {
-    // Subscribe to real-time updates when a chat is opened
-    if (openChatRequestId) {
-      // Unsubscribe from previous channel if exists
-      if (messageChannels.current[openChatRequestId]) {
-        unsubscribeFromMessages(messageChannels.current[openChatRequestId]);
+    if (!openChatRequestId) return;
+    // Clear previous messages for this request (but keep temporary messages)
+    setMessages(prev => {
+      const currentMessages = prev[openChatRequestId] || [];
+      // Keep only temporary messages
+      const tempMessages = currentMessages.filter(m => m.id.startsWith('temp-'));
+      return { ...prev, [openChatRequestId]: tempMessages };
+    });
+    // Fetch messages once when opening chat
+    const fetchMessages = async () => {
+      const { data: msgs, error } = await supabase
+        .from('custom_request_messages')
+        .select('id, custom_request_id, sender_id, message, created_at, sender_profile:profiles(full_name)')
+        .eq('custom_request_id', openChatRequestId)
+        .order('created_at', { ascending: true });
+      if (!error && msgs) {
+        // Map sender_profile from array to single object (or null)
+        const mappedMsgs = msgs.map((msg: any) => ({
+          ...msg,
+          sender_profile: Array.isArray(msg.sender_profile) ? msg.sender_profile[0] || null : msg.sender_profile || null
+        }));
+        setMessages(prev => {
+          // Get existing temporary messages
+          const tempMessages = (prev[openChatRequestId] || []).filter(m => m.id.startsWith('temp-'));
+          // Combine with new messages and deduplicate
+          const all = [...tempMessages, ...mappedMsgs];
+          const deduped = Array.from(new Map(all.map(m => [m.id, m])).values());
+          return { ...prev, [openChatRequestId]: deduped };
+        });
       }
-      
-      // Subscribe to new messages
-      messageChannels.current[openChatRequestId] = subscribeToMessages(
-        openChatRequestId,
-        (newMessage) => {
-          setMessages(prev => ({
-            ...prev,
-            [openChatRequestId]: [...(prev[openChatRequestId] || []), newMessage]
-          }));
-        }
-      );
+    };
+    fetchMessages();
+    // Subscribe to new messages
+    if (messageChannels.current[openChatRequestId]) {
+      unsubscribeFromMessages(messageChannels.current[openChatRequestId]);
     }
-    
-    // Cleanup function
+    const channel = subscribeToMessages(openChatRequestId, async (newMsg) => {
+      // Fetch profile information for the new message sender
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', newMsg.sender_id)
+        .single();
+      const messageWithProfile = {
+        ...newMsg,
+        sender_profile: profileError ? null : profile
+      };
+      setMessages(prev => {
+        // Prevent duplicate messages
+        const existing = prev[openChatRequestId] || [];
+        // Filter out any temporary messages with the same content
+        const filteredExisting = existing.filter(m => 
+          !(m.id.startsWith('temp-') && m.message === messageWithProfile.message)
+        );
+        // Check if message already exists
+        if (filteredExisting.some(m => m.id === messageWithProfile.id)) return prev;
+        return {
+          ...prev,
+          [openChatRequestId]: [...filteredExisting, messageWithProfile]
+        };
+      });
+      scrollToBottom(openChatRequestId);
+    });
+    messageChannels.current[openChatRequestId] = channel;
+    // Cleanup on close or switch
     return () => {
-      if (openChatRequestId && messageChannels.current[openChatRequestId]) {
+      if (messageChannels.current[openChatRequestId]) {
         unsubscribeFromMessages(messageChannels.current[openChatRequestId]);
         delete messageChannels.current[openChatRequestId];
       }
     };
-  }, [openChatRequestId]);
+  }, [openChatRequestId, scrollToBottom]);
+
+  // Scroll to bottom when messages change or chat is opened
+  useEffect(() => {
+    if (openChatRequestId) {
+      scrollToBottom(openChatRequestId);
+    }
+  }, [openChatRequestId, scrollToBottom]);
+
+  // Scroll to bottom when messages are updated
+  useEffect(() => {
+    if (openChatRequestId && messages[openChatRequestId]) {
+      scrollToBottom(openChatRequestId);
+    }
+  }, [messages, openChatRequestId, scrollToBottom]);
 
   const fetchRequests = async () => {
     console.log('Fetching custom requests...');
@@ -275,36 +348,70 @@ const CustomRequestsList = () => {
   };
 
   const handleOpenChat = async (requestId: string) => {
+    console.log('Opening chat for request:', requestId);
     setOpenChatRequestId(requestId);
     const fetchedMessages = await fetchMessages(requestId);
+    console.log('Fetched messages:', fetchedMessages);
     setMessages(prev => ({
       ...prev,
       [requestId]: fetchedMessages
     }));
+    
+    // Scroll to bottom after messages are loaded
+    scrollToBottom(requestId);
   };
 
   const handleSendMessage = async (requestId: string) => {
     if (!session || !newMessage[requestId]?.trim()) return;
+    const messageToSend = newMessage[requestId].trim();
 
     console.log('Sending message:', {
       custom_request_id: requestId,
       sender_id: session.user.id,
-      message: newMessage[requestId].trim()
+      message: messageToSend
     });
 
     try {
+      // Add the message to the UI immediately to provide instant feedback
+      const tempMessage = {
+        id: 'temp-' + Date.now(), // Temporary ID
+        custom_request_id: requestId,
+        sender_id: session.user.id,
+        message: messageToSend,
+        created_at: new Date().toISOString(),
+        sender_profile: {
+          full_name: 'You'
+        }
+      };
+      
+      setMessages(prev => ({
+        ...prev,
+        [requestId]: [...(prev[requestId] || []), tempMessage]
+      }));
+      
+      setNewMessage(prev => ({
+        ...prev,
+        [requestId]: ''
+      }));
+
       const { data, error } = await supabase
         .from('custom_request_messages')
         .insert({
           custom_request_id: requestId,
           sender_id: session.user.id,
-          message: newMessage[requestId].trim()
+          message: messageToSend
         })
         .select('*, sender_profile:profiles(full_name)');
 
       console.log('Message insert result:', { data, error });
 
       if (error) {
+        // Remove the temporary message if there was an error
+        setMessages(prev => ({
+          ...prev,
+          [requestId]: (prev[requestId] || []).filter(msg => msg.id !== tempMessage.id)
+        }));
+        
         // Handle specific error cases
         if (error.message.includes('Could not find the table')) {
           showError('Chat functionality is not set up yet. Please run the database migration script from the migrations folder.');
@@ -316,21 +423,23 @@ const CustomRequestsList = () => {
           showError('Failed to send message: ' + error.message);
         }
         console.error('Failed to send message:', error);
+        // Restore the message in the input field
+        setNewMessage(prev => ({
+          ...prev,
+          [requestId]: messageToSend
+        }));
         return;
       }
 
-      const newMsg = data[0] as unknown as Message;
-      // Add message to state immediately for better UX
+      // Replace the temporary message with the real one
       setMessages(prev => ({
         ...prev,
-        [requestId]: [...(prev[requestId] || []), newMsg]
+        [requestId]: [
+          ...(prev[requestId] || []).filter(msg => msg.id !== tempMessage.id),
+          data[0]
+        ]
       }));
-
-      setNewMessage(prev => ({
-        ...prev,
-        [requestId]: ''
-      }));
-
+      
       showSuccess('Message sent successfully!');
     } catch (error: any) {
       console.error('Unexpected error sending message:', error);
@@ -554,33 +663,38 @@ const CustomRequestsList = () => {
                             <DialogTitle>Chat about Request: {request.product_description.substring(0, 30)}...</DialogTitle>
                           </DialogHeader>
                           <div className="flex-1 overflow-hidden">
-                            <ScrollArea className="h-[400px] pr-4">
-                              <div className="space-y-4 overflow-y-auto h-full">
-                                {(messages[request.id] || []).map((message) => (
-                                  <div 
-                                    key={message.id} 
-                                    className={`p-3 rounded-lg ${
-                                      message.sender_id === session?.user.id 
-                                        ? 'bg-primary text-primary-foreground ml-10' 
-                                        : 'bg-muted mr-10'
-                                    }`}
-                                  >
-                                    <div className="font-medium text-sm">
-                                      {message.sender_profile?.full_name || 'User'}
+                            <div className="h-[400px] pr-4 overflow-y-auto" ref={(el) => { scrollAreaRefs.current[request.id] = el; }}>
+                              <div className="space-y-4">
+                                {(messages[request.id] || [])
+                                  .filter(m => !m.id.startsWith('temp-')) // Filter out temporary messages
+                                  .filter((m, index, self) => 
+                                    index === self.findIndex(m2 => m2.id === m.id) // Deduplicate by id
+                                  )
+                                  .map((message) => (
+                                    <div 
+                                      key={message.id} 
+                                      className={`p-3 rounded-lg ${
+                                        message.sender_id === session?.user.id 
+                                          ? 'bg-primary text-primary-foreground ml-10' 
+                                          : 'bg-muted mr-10'
+                                      }`}
+                                    >
+                                      <div className="font-medium text-sm">
+                                        {message.sender_profile?.full_name || 'User'}
+                                      </div>
+                                      <div className="mt-1">{message.message}</div>
+                                      <div className="text-xs opacity-70 mt-1">
+                                        {format(new Date(message.created_at), 'PPp')}
+                                      </div>
                                     </div>
-                                    <div className="mt-1">{message.message}</div>
-                                    <div className="text-xs opacity-70 mt-1">
-                                      {format(new Date(message.created_at), 'PPp')}
-                                    </div>
-                                  </div>
-                                ))}
-                                {(messages[request.id] || []).length === 0 && (
+                                  ))}
+                                {(messages[request.id] || []).filter(m => !m.id.startsWith('temp-')).length === 0 && (
                                   <p className="text-center text-muted-foreground py-8">
                                     No messages yet. Start the conversation!
                                   </p>
                                 )}
                               </div>
-                            </ScrollArea>
+                            </div>
                           </div>
                           <div className="flex gap-2 pt-4">
                             <Textarea
