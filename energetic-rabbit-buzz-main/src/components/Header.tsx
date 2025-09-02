@@ -29,14 +29,12 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useAuth } from "@/context/AuthContext";
-import { useNotifications } from "@/context/NotificationContext";
 
 const ADMIN_EMAIL = "mredza31@gmail.com";
 
 const Header = () => {
   const navigate = useNavigate();
   const { session } = useAuth();
-  const { unreadCount, notifications, markAsRead, markAllAsRead } = useNotifications();
   const [profile, setProfile] = useState<{ avatar_url: string; full_name: string } | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -295,61 +293,124 @@ const Header = () => {
               <div className="relative">
                 <Button variant="ghost" size="icon" onClick={() => {
                   setShowNotif((v) => !v);
+                  if (isAdmin) setNotifSeen(true);
+                  else setUserNotifSeen(true);
                 }} className="relative">
                   <Bell className="h-6 w-6" />
-                  {unreadCount > 0 && (
+                  {isAdmin && (!notifSeen && (pendingOrders.length + pendingRequests.length > 0)) && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-xs px-1.5 py-0.5">
-                      {unreadCount}
+                      {pendingOrders.length + pendingRequests.length}
+                    </span>
+                  )}
+                  {!isAdmin && (!userNotifSeen && ((userOrderUpdates.filter((o: any) => !dismissedOrderIds.includes(o.id)).length + userRequestUpdates.filter((r: any) => !dismissedRequestIds.some(d => d.id === r.id && d.updated_at === r.updated_at)).length) > 0)) && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-xs px-1.5 py-0.5">
+                      {userOrderUpdates.filter((o: any) => !dismissedOrderIds.includes(o.id)).length + userRequestUpdates.filter((r: any) => !dismissedRequestIds.some(d => d.id === r.id && d.updated_at === r.updated_at)).length}
                     </span>
                   )}
                 </Button>
                 {showNotif && (
                   <div ref={notifDropdownRef} className="absolute right-0 mt-2 w-80 bg-white border rounded shadow-lg z-50">
-                    <div className="p-3 border-b font-bold flex justify-between items-center">
-                      <span>Chat Notifications</span>
-                      {notifications.filter(n => !n.read).length > 0 && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            markAllAsRead();
-                          }}
-                          className="text-xs h-6"
-                        >
-                          Mark all as read
-                        </Button>
-                      )}
-                    </div>
+                    <div className="p-3 border-b font-bold">Notifications</div>
                     <div className="max-h-80 overflow-y-auto">
-                      {notifications.length > 0 ? (
-                        notifications.map((notification) => (
-                          <div 
-                            key={notification.id} 
-                            className={`px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b last:border-b-0 ${!notification.read ? 'bg-blue-50' : ''}`}
-                            onClick={() => {
-                              markAsRead(notification.id);
-                              setShowNotif(false);
-                              // Navigate to the appropriate chat
-                              if (session.user.email === ADMIN_EMAIL) {
-                                setTimeout(() => navigate(`/admin/custom-requests`), 100);
-                              } else {
-                                setTimeout(() => navigate(`/custom-request/${notification.custom_request_id}`), 100);
-                              }
-                            }}
-                          >
-                            <div className="font-medium">{notification.sender_name}</div>
-                            <div className="text-muted-foreground truncate">{notification.message}</div>
-                            <div className="text-xs text-muted-foreground mt-1">
-                              {notification.request_title && (
-                                <span className="block">Request: {notification.request_title.substring(0, 30)}{notification.request_title.length > 30 ? '...' : ''}</span>
-                              )}
-                              <span>{new Date(notification.created_at).toLocaleString()}</span>
+                      {isAdmin && (
+                        <>
+                          {pendingOrders.length > 0 && (
+                            <div>
+                              <div className="px-3 py-2 text-sm font-semibold text-primary">New Orders</div>
+                              {pendingOrders.map((order: any) => (
+                                <div key={order.id} className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b last:border-b-0"
+                                  onClick={() => {
+                                    setShowNotif(false);
+                                    setTimeout(() => navigate('/admin/manage-orders'), 100);
+                                  }}>
+                                  <div><span className="font-medium">Order ID:</span> {order.id}</div>
+                                  <div><span className="font-medium">Date:</span> {order.created_at ? new Date(order.created_at).toLocaleString() : ''}</div>
+                                  <div><span className="font-medium">Total:</span> MYR {order.total_price?.toFixed(2) ?? '-'}</div>
+                                </div>
+                              ))}
                             </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="px-3 py-4 text-center text-muted-foreground">No chat notifications.</div>
+                          )}
+                          {pendingRequests.length > 0 && (
+                            <div>
+                              <div className="px-3 py-2 text-sm font-semibold text-primary">New Custom Requests</div>
+                              {pendingRequests.map((req: any) => (
+                                <div key={req.id} className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b last:border-b-0"
+                                  onClick={() => {
+                                    setShowNotif(false);
+                                    setTimeout(() => navigate('/admin/custom-requests'), 100);
+                                  }}>
+                                  <div><span className="font-medium">Request ID:</span> {req.id}</div>
+                                  <div><span className="font-medium">Date:</span> {req.created_at ? new Date(req.created_at).toLocaleString() : ''}</div>
+                                  <div><span className="font-medium">Description:</span> {req.product_description?.slice(0, 40) ?? '-'}{req.product_description?.length > 40 ? '...' : ''}</div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {(pendingOrders.length === 0 && pendingRequests.length === 0) && (
+                            <div className="px-3 py-4 text-center text-muted-foreground">No new notifications.</div>
+                          )}
+                        </>
+                      )}
+                      {!isAdmin && (
+                        <>
+                          {(() => {
+                            // Combine and sort all user notifications by updated_at desc
+                            const orderNotifs = userOrderUpdates.filter((o: any) => !dismissedOrderIds.includes(o.id)).map((order: any) => ({
+                              type: 'order',
+                              id: order.id,
+                              status: order.status,
+                              updated_at: order.updated_at,
+                              description: '',
+                            }));
+                            const requestNotifs = userRequestUpdates.filter((r: any) => !dismissedRequestIds.some(d => d.id === r.id && d.updated_at === r.updated_at)).map((req: any) => ({
+                              type: 'custom',
+                              id: req.id,
+                              status: req.status,
+                              updated_at: req.updated_at,
+                              description: req.product_description,
+                            }));
+                            const allNotifs = [...orderNotifs, ...requestNotifs].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+                            if (allNotifs.length === 0) {
+                              return <div className="px-3 py-4 text-center text-muted-foreground">No new notifications.</div>;
+                            }
+                            return (
+                              <div>
+                                {allNotifs.map((notif) => notif.type === 'order' ? (
+                                  <div key={notif.id} className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b last:border-b-0"
+                                    onMouseDown={() => {
+                                      setShowNotif(false);
+                                      setDismissedOrderIds(ids => {
+                                        const updated = [...ids, notif.id];
+                                        localStorage.setItem('dismissedOrderIds', JSON.stringify(updated));
+                                        return updated;
+                                      });
+                                      setTimeout(() => navigate('/account?tab=orders'), 0);
+                                    }}>
+                                    <div><span className="font-medium">Order ID:</span> {notif.id}</div>
+                                    <div><span className="font-medium">Status:</span> {notif.status}</div>
+                                    <div><span className="font-medium">Updated:</span> {notif.updated_at ? new Date(notif.updated_at).toLocaleString() : ''}</div>
+                                  </div>
+                                ) : (
+                                  <div key={notif.id} className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b last:border-b-0"
+                                    onMouseDown={() => {
+                                      setShowNotif(false);
+                                      setDismissedRequestIds(ids => {
+                                        const updated = [...ids, { id: notif.id, updated_at: notif.updated_at }];
+                                        localStorage.setItem('dismissedRequestIds', JSON.stringify(updated));
+                                        return updated;
+                                      });
+                                      setTimeout(() => { navigate('/account?tab=requests'); }, 0);
+                                    }}>
+                                    <div><span className="font-medium">Request ID:</span> {notif.id}</div>
+                                    <div><span className="font-medium">Status:</span> {notif.status}</div>
+                                    <div><span className="font-medium">Updated:</span> {notif.updated_at ? new Date(notif.updated_at).toLocaleString() : ''}</div>
+                                    <div><span className="font-medium">Description:</span> {notif.description?.slice(0, 40) ?? '-'}{notif.description?.length > 40 ? '...' : ''}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })()}
+                        </>
                       )}
                     </div>
                   </div>
