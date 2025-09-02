@@ -26,6 +26,7 @@ import CustomRequestsList from "./pages/admin/CustomRequestsList";
 import CustomRequestConfirmation from "./pages/CustomRequestConfirmation";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "@/context/AuthContext";
+import { NotificationProvider } from "@/context/NotificationContext";
 import { Toaster } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Layout from "./components/Layout";
@@ -40,32 +41,34 @@ function App() {
       <Router>
         <ScrollToTop />
         <AuthProvider>
-          <Layout>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/custom-request" element={<CustomRequest />} />
-              <Route path="/custom-request/:requestId" element={<CustomRequestDetail />} />
-              <Route path="/custom-request-confirmation" element={<CustomRequestConfirmation />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/category/:categoryName" element={<CategoryPage />} />
-              <Route path="/product/:productId" element={<ProductPage />} />
-              <Route path="/cart" element={<Cart />} />
-              <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
-              <Route path="/account" element={<Account />} />
-              <Route path="/order/:orderId" element={<OrderDetail />} />
-              <Route path="/search" element={<SearchPage />} />
-              <Route path="/admin/categories" element={<AdminCategories />} />
-              <Route path="/admin/hot-items" element={<AdminHotItems />} />
-              <Route path="/admin/products/new" element={<AddProductPage />} />
-              <Route path="/admin/products" element={<ManageProducts />} />
-              <Route path="/admin/custom-requests" element={<CustomRequestsList />} />
-              <Route path="/admin/manage-orders" element={<ManageOrders />} />
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Layout>
+          <NotificationProvider>
+            <Layout>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/custom-request" element={<CustomRequest />} />
+                <Route path="/custom-request/:requestId" element={<CustomRequestDetail />} />
+                <Route path="/custom-request-confirmation" element={<CustomRequestConfirmation />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/category/:categoryName" element={<CategoryPage />} />
+                <Route path="/product/:productId" element={<ProductPage />} />
+                <Route path="/cart" element={<Cart />} />
+                <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
+                <Route path="/account" element={<Account />} />
+                <Route path="/order/:orderId" element={<OrderDetail />} />
+                <Route path="/search" element={<SearchPage />} />
+                <Route path="/admin/categories" element={<AdminCategories />} />
+                <Route path="/admin/hot-items" element={<AdminHotItems />} />
+                <Route path="/admin/products/new" element={<AddProductPage />} />
+                <Route path="/admin/products" element={<ManageProducts />} />
+                <Route path="/admin/custom-requests" element={<CustomRequestsList />} />
+                <Route path="/admin/manage-orders" element={<ManageOrders />} />
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Layout>
+          </NotificationProvider>
         </AuthProvider>
       </Router>
     </QueryClientProvider>
