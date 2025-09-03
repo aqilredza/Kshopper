@@ -12,6 +12,7 @@ KShopper connects Malaysian customers with personal shoppers in Korea to source 
 - Shopping cart and checkout
 - Admin dashboard for managing products and requests
 - Real-time chat between users and admins for custom requests
+- Customizable About Us page with admin profile management
 
 ## Tech Stack
 - React + TypeScript with Vite
@@ -33,7 +34,9 @@ Run the SQL migration scripts in the `migrations` folder in order:
 5. `005_create_order_from_cart.sql` - Creates function to convert cart to order
 6. `006_admin_view_orders.sql` - Adds policies to allow admin to view all orders
 7. `007_enable_rls_orders.sql` - Enables RLS on orders table if not already enabled
-
+8. `014_add_description_to_profiles.sql` - Adds description field to profiles table for About page (see ABOUT_PAGE_SETUP.md)
+9. `015_add_is_admin_to_profiles.sql` - Adds is_admin flag to identify admin user
+10. `016_create_admin_profile_function.sql` - Creates RPC function for safe admin profile updates
 
 ### Platform Setup (Required Before Adding Products)
 Before adding products, you need to set up the platform structure:
@@ -47,6 +50,16 @@ Admins and users can now communicate directly about custom requests through a re
 - Users can chat from their Account page or the request detail page
 - Real-time messaging with message history
 - Secure communication with proper access controls
+
+## Admin About Page Management
+Admins can now customize their profile information and description on the About Us page:
+1. Log in as admin (mredza31@gmail.com)
+2. Go to the Admin Dashboard
+3. Click on "About Page" card
+4. Edit profile information, upload an image, and modify the description
+5. Preview changes and save
+
+See `ABOUT_PAGE_SETUP.md` for detailed setup instructions.
 
 ## Troubleshooting
 If you encounter the "Chat functionality is not set up yet" error:

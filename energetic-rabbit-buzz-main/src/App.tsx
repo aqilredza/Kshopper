@@ -24,6 +24,7 @@ import ManageOrders from "./pages/ManageOrders";
 import ManageProducts from "./pages/ManageProducts";
 import CustomRequestsList from "./pages/admin/CustomRequestsList";
 import CustomRequestConfirmation from "./pages/CustomRequestConfirmation";
+import AdminAboutPage from "./pages/admin/AdminAboutPage";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "@/context/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
@@ -62,6 +63,7 @@ function App() {
               <Route path="/admin/products" element={<ManageProducts />} />
               <Route path="/admin/custom-requests" element={<CustomRequestsList />} />
               <Route path="/admin/manage-orders" element={<ManageOrders />} />
+              <Route path="/admin/about" element={<AdminAboutPage />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

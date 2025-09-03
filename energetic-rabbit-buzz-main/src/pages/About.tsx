@@ -1,18 +1,135 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { Phone, Mail } from 'lucide-react';
+
+const ADMIN_EMAIL = "mredza31@gmail.com";
 
 const About = () => {
+  const [adminProfile, setAdminProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAdminProfile();
+  }, []);
+
+  const fetchAdminProfile = async () => {
+    try {
+      // Fetch the admin profile using the is_admin flag
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('is_admin', true)
+        .single();
+
+      if (profileError) {
+        throw profileError;
+      }
+
+      if (profileData) {
+        console.log('Admin profile data fetched:', profileData);
+        setAdminProfile(profileData);
+      } else {
+        // Fallback to default values
+        setAdminProfile({
+          full_name: 'Redza',
+          avatar_url: '',
+          description: "Hey there! 👋 I'm Redza, your new go-to style guru and personal shopper.\n\nTired of endless scrolling? I'm here to do the heavy lifting! I'll handpick pieces you'll absolutely love, spill the tea on the latest trends, and make sure your look is always on point. 🔥\n\nReady to unlock your best style? Let's chat! Slide into my WhatsApp and we'll get started."
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching admin profile:', error);
+      // Fallback to default values
+      setAdminProfile({
+        full_name: 'Redza',
+        avatar_url: '',
+        description: "Hey there! 👋 I'm Redza, your new go-to style guru and personal shopper.\n\nTired of endless scrolling? I'm here to do the heavy lifting! I'll handpick pieces you'll absolutely love, spill the tea on the latest trends, and make sure your look is always on point. 🔥\n\nReady to unlock your best style? Let's chat! Slide into my WhatsApp and we'll get started."
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <div className="flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+        </div>
+      </div>
+    );
+  }
+
+  const description = adminProfile?.description || "Hey there! 👋 I'm Redza, your new go-to style guru and personal shopper.\n\nTired of endless scrolling? I'm here to do the heavy lifting! I'll handpick pieces you'll absolutely love, spill the tea on the latest trends, and make sure your look is always on point. 🔥\n\nReady to unlock your best style? Let's chat! Slide into my WhatsApp and we'll get started.";
+  const fullName = adminProfile?.full_name || 'Redza';
+  const avatarUrl = adminProfile?.avatar_url || '';
+
   return (
-    <div className="container mx-auto px-4 py-12 text-center">
-      <h1 className="text-4xl font-bold mb-6">About Us</h1>
-      <p className="text-lg text-gray-700 mb-8">
-        Welcome to our platform! We are dedicated to bringing you the best products and services.
-        Our mission is to connect you with unique items and provide a seamless shopping experience.
-      </p>
-      <Link to="/">
-        <Button>Go to Home</Button>
-      </Link>
+    <div className="container mx-auto px-4 py-12">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-4xl font-bold mb-8 text-center">About Us</h1>
+        
+        <div className="bg-gradient-to-r from-red-50 to-white rounded-2xl shadow-lg p-8 mb-12">
+          <div className="flex flex-col md:flex-row items-center gap-8">
+            <div className="flex-shrink-0">
+              {avatarUrl ? (
+                <img 
+                  src={avatarUrl} 
+                  alt={`${fullName}'s Profile`} 
+                  className="w-48 h-48 rounded-full object-cover border-4 border-white shadow-lg"
+                />
+              ) : (
+                <div className="bg-gray-200 border-2 border-dashed rounded-full w-48 h-48 flex items-center justify-center text-gray-400">
+                  Profile Image
+                </div>
+              )}
+            </div>
+            
+            <div className="flex-1 text-center md:text-left">
+              <h2 className="text-2xl font-bold mb-4">Meet Your Style Guru</h2>
+              <div className="whitespace-pre-line text-gray-700 mb-6">
+                {description}
+              </div>
+              
+              <div className="bg-red-50 rounded-lg p-6 border border-red-100">
+                <h3 className="font-bold text-lg mb-3 text-red-800">Hit me up:</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-center md:justify-start gap-2">
+                    <Phone className="text-red-600" size={18} />
+                    <span className="font-medium">WhatsApp: +60 17-612 5413</span>
+                  </div>
+                  <div className="flex items-center justify-center md:justify-start gap-2">
+                    <Mail className="text-red-600" size={18} />
+                    <span className="font-medium">Email: mredza31@gmail.com</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-2xl shadow-lg p-8 mb-12">
+          <h2 className="text-2xl font-bold mb-4 text-center">About KShopper</h2>
+          <p className="text-gray-700 mb-4">
+            KShopper is your trusted bridge to authentic Korean products. We connect Malaysian customers with verified 
+            personal shoppers in Korea to source authentic K-beauty, fashion, snacks, and lifestyle products.
+          </p>
+          <p className="text-gray-700">
+            Our mission is to make Korean products accessible to everyone in Malaysia while ensuring authenticity and 
+            quality. Whether you're looking for the latest K-beauty trends, exclusive fashion pieces, or unique snacks, 
+            we've got you covered.
+          </p>
+        </div>
+        
+        <div className="text-center">
+          <Link to="/">
+            <Button className="bg-red-600 hover:bg-red-700 text-white px-8 py-3 text-lg">
+              Back to Home
+            </Button>
+          </Link>
+        </div>
+      </div>
     </div>
   );
 };

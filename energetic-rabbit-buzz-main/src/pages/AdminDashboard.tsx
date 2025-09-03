@@ -7,7 +7,7 @@ const AdminDashboard = () => {
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
       <h1 className="text-4xl font-black uppercase text-center mb-8">Admin Dashboard</h1>
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
         <Card>
           <CardHeader>
             <CardTitle>Manage Orders</CardTitle>
@@ -60,6 +60,17 @@ const AdminDashboard = () => {
             <p className="text-muted-foreground mb-4">View and manage all products.</p>
             <Button asChild>
               <Link to="/admin/products">Manage Products</Link>
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>About Page</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">Edit About Us page content and profile image.</p>
+            <Button asChild>
+              <Link to="/admin/about">Edit About Page</Link>
             </Button>
           </CardContent>
         </Card>

@@ -288,6 +288,16 @@ const Header = () => {
         >
           Request Items
         </Link>
+        <Link 
+          to="/about" 
+          className={`${commonClasses} ${isMobile ? mobileClasses : desktopClasses} ${textClasses}`} 
+          {...linkProps}
+          style={{
+            textShadow: "0 10px 15px rgba(239, 68, 68, 0.3), 0 4px 6px rgba(236, 72, 153, 0.3)"
+          }}
+        >
+          About Us
+        </Link>
       </>
     );
   };
