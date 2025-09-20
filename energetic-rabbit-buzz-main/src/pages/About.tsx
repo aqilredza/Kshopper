@@ -87,7 +87,7 @@ const About = () => {
             </div>
             
             <div className="flex-1 text-center md:text-left">
-              <h2 className="text-2xl font-bold mb-4">Meet Your Style Guru</h2>
+              <h2 className="text-2xl font-bold mb-4">Shop Smarter, Live Better</h2>
               <div className="whitespace-pre-line text-gray-700 mb-6">
                 {description}
               </div>

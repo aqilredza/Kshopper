@@ -93,7 +93,7 @@ const ProductCard = ({ id, name, price, imageUrl }: ProductCardProps) => {
         </CardContent>
       </Link>
       <CardFooter className="p-4 flex justify-between items-center">
-        <p className="text-xl font-black">${price.toFixed(2)}</p>
+  <p className="text-xl font-black">MYR {price.toFixed(2)}</p>
         <Button onClick={handleAddToCart} disabled={adding}>{adding ? 'Adding...' : 'Add to Cart'}</Button>
       </CardFooter>
     </Card>

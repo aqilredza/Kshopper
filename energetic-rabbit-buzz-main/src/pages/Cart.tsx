@@ -119,7 +119,7 @@ const Cart = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <div className="flex flex-col min-h-screen justify-center items-center container mx-auto px-4 sm:px-6 lg:px-8">
       <div className="text-center mb-12">
         <h1 className="text-4xl md:text-5xl font-black uppercase mb-4">
           <span className="bg-gradient-to-r from-red-500 via-pink-500 to-blue-600 bg-clip-text text-transparent">
@@ -138,9 +138,9 @@ const Cart = () => {
               <Loader2 className="h-8 w-8 animate-spin text-red-500" />
             </div>
           ) : cartItems.length === 0 ? (
-            <div className="flex items-center justify-center min-h-[500px]">
-              <div className="bg-white rounded-2xl shadow-lg w-full max-w-2xl">
-                <div className="text-center p-12">
+            <div className="flex items-center justify-center min-h-[60vh] w-full">
+              <div className="bg-white rounded-2xl shadow-lg w-full max-w-2xl flex items-center justify-center">
+                <div className="text-center p-12 w-full">
                   <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
                     <ShoppingCart className="h-12 w-12 text-gray-400" />
                   </div>
