@@ -36,12 +36,13 @@ Run the SQL migration scripts in the `migrations` folder in order:
 7. `007_enable_rls_orders.sql` - Enables RLS on orders table if not already enabled
 8. `014_add_description_to_profiles.sql` - Adds description field to profiles table for About page (see ABOUT_PAGE_SETUP.md)
 9. `015_add_is_admin_to_profiles.sql` - Adds is_admin flag to identify admin user
-10. `016_create_admin_profile_function.sql` - Creates RPC function for safe admin profile updates
+10. `016_create_admin_profile_function.sql` - Creates/updates RPC function for safe admin profile updates (with admin_title and email fields)
+11. `017_add_about_content_table.sql` - Creates table for editable 'About KShopper' content (title, description, mission)
 
 ### Platform Setup (Required Before Adding Products)
 Before adding products, you need to set up the platform structure:
 1. Run the `sql/setup_menu_items_and_platform.sql` script in your Supabase SQL editor. This creates the required `platforms` and `menu_items` tables.
-2. Then run the `complete_setup.sql` script to insert a default platform record (if not already present).
+2. Then run the `complete_setup.sql` script to insert a default platform record and setup about content table (if not already present).
 3. Verify the setup was successful by checking the output of the verification query in `complete_setup.sql`.
 
 ## Custom Request Chat Feature
